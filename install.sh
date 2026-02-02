@@ -90,6 +90,15 @@ echo "⚡ Démarrage du container..."
 pct start $VMID
 sleep 3
 
+echo "🌐 Activation de l'interface réseau..."
+pct exec $VMID -- ip link set eth0 up
+sleep 1
+
+echo "📡 Attente de l'IP DHCP..."
+pct exec $VMID -- sh -c 'timeout 30 udhcpc -i eth0' || true
+sleep 2
+
+echo "✅ Interface réseau prête"
 echo "🔧 Configuration Alpine..."
 pct exec $VMID -- apk update
 pct exec $VMID -- apk add --no-cache python3 py3-pip git curl bash
