@@ -107,14 +107,15 @@ echo "📦 Clonage du repo..."
 pct exec $VMID -- git clone $REPO_URL /app
 
 echo "📚 Installation dépendances Python..."
-pct exec $VMID -- pip3 install --break-system-packages -r /app/requirements.txt
+pct exec $VMID -- python3 -m venv /app/venv
+pct exec $VMID -- /app/venv/bin/pip install -r /app/requirements.txt
 
 echo "🔄 Configuration du service..."
 pct exec $VMID -- tee /etc/init.d/supervision > /dev/null << 'EOF'
 #!/sbin/openrc-run
 
 description="Supervision Proxmox"
-command="/usr/bin/python3"
+command="/app/venv/bin/python3"
 command_args="/app/app.py"
 command_background=yes
 pidfile="/var/run/supervision.pid"
