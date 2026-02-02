@@ -1,0 +1,61 @@
+- name: Configuration du container Alpine pour supervision Proxmox
+  hosts: lxc
+  become: true
+
+  vars:
+    app_dir: /app
+    venv_dir: /app/venv
+
+  tasks:
+
+    - name: Mise à jour des paquets
+      apk:
+        update_cache: yes
+
+    - name: Installer les paquets nécessaires
+      apk:
+        name:
+          - python3
+          - py3-pip
+          - git
+          - curl
+          - bash
+          - openrc
+        state: present
+
+    - name: Cloner le dépôt Git
+      git:
+        repo: https://github.com/Lajavel-gg/supervision-proxmox
+        dest: "{{ app_dir }}"
+        force: yes
+
+    - name: Créer l'environnement virtuel Python
+      command: python3 -m venv {{ venv_dir }}
+      args:
+        creates: "{{ venv_dir }}"
+
+    - name: Installer les dépendances Python
+      pip:
+        requirements: "{{ app_dir }}/requirements.txt"
+        virtualenv: "{{ venv_dir }}"
+
+    - name: Créer le dossier de logs
+      file:
+        path: /var/log
+        state: directory
+
+    - name: Configurer rc.local pour démarrage auto
+      copy:
+        dest: /etc/rc.local
+        mode: "0755"
+        content: |
+          #!/bin/sh
+          {{ venv_dir }}/bin/python3 {{ app_dir }}/app.py > /var/log/supervision.log 2>&1 &
+
+    - name: Activer rc.local
+      command: rc-update add local default
+      ignore_errors: yes
+
+    - name: Lancer l'application immédiatement
+      shell: |
+        {{ venv_dir }}/bin/python3 {{ app_dir }}/app.py > /var/log/supervision.log 2>&1 &
