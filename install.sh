@@ -30,30 +30,54 @@ done
 echo "✅ ID disponible trouvé: $VMID"
 # ==================================================================
 
-echo "🏗️  Vérification du template Alpine..."
+# ==================== TÉLÉCHARGER ALPINE ====================
+echo "🏗️  Préparation du template Alpine..."
 
-# Chercher dans les templates déjà téléchargés
-ALPINE_TEMPLATE=$(pveam list local 2>/dev/null | grep -i alpine | grep amd64 | head -1 | awk '{print $1}' | sed 's|local:vztmpl/||')
+ALPINE_TEMPLATE="alpine-3.19-default_20231211_amd64.tar.zst"
+TEMPLATE_DIR="/var/lib/vz/template/cache"
+TEMPLATE_PATH="$TEMPLATE_DIR/$ALPINE_TEMPLATE"
 
-if [ -z "$ALPINE_TEMPLATE" ]; then
-    echo "📥 Aucun template Alpine trouvé localement"
-    echo "   Recherche des templates disponibles en ligne..."
+# Vérifier si le template existe déjà
+if [ -f "$TEMPLATE_PATH" ]; then
+    echo "✅ Template Alpine trouvé localement"
+else
+    echo "📥 Template non trouvé localement"
+    echo "   Téléchargement d'Alpine depuis Internet..."
+    echo "   (Cela peut prendre 3-5 minutes selon la connexion)"
     
-    # Chercher dans les templates disponibles
-    ALPINE_TEMPLATE=$(pveam list content 2>/dev/null | grep -i "alpine.*amd64" | head -1 | awk '{print $1}')
+    # Créer le répertoire s'il n'existe pas
+    mkdir -p "$TEMPLATE_DIR"
     
-    if [ -z "$ALPINE_TEMPLATE" ]; then
-        echo "❌ Aucun template Alpine trouvé"
-        echo "   Veuillez télécharger manuellement via l'interface Proxmox"
+    # URL de téléchargement (depuis le CDN Proxmox)
+    DOWNLOAD_URL="https://download.proxmox.com/images/system/alpine-3.19-default_20231211_amd64.tar.zst"
+    
+    echo "📡 Téléchargement depuis: $DOWNLOAD_URL"
+    
+    # Télécharger avec wget (plus fiable)
+    if command -v wget &> /dev/null; then
+        wget -q --show-progress -O "$TEMPLATE_PATH" "$DOWNLOAD_URL" || {
+            echo "❌ Erreur de téléchargement avec wget"
+            rm -f "$TEMPLATE_PATH"
+            exit 1
+        }
+    elif command -v curl &> /dev/null; then
+        curl -# -o "$TEMPLATE_PATH" "$DOWNLOAD_URL" || {
+            echo "❌ Erreur de téléchargement avec curl"
+            rm -f "$TEMPLATE_PATH"
+            exit 1
+        }
+    else
+        echo "❌ Erreur: wget ou curl requis pour télécharger"
         exit 1
     fi
     
-    echo "📥 Téléchargement de $ALPINE_TEMPLATE..."
-    pveam download local $ALPINE_TEMPLATE
+    echo "✅ Téléchargement terminé"
 fi
 
-echo "✅ Template Alpine: $ALPINE_TEMPLATE"
-echo "🏗️  Création du container LXC Alpine..."
+echo "✅ Template Alpine prêt"
+# ==============================================================
+
+echo "🏗️  Création du container LXC Alpine (ID: $VMID)..."
 pct create $VMID local:vztmpl/$ALPINE_TEMPLATE \
   -hostname $HOSTNAME \
   -net0 name=eth0,ip=$IP,bridge=vmbr0 \
