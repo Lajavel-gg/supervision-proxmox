@@ -133,7 +133,7 @@ pct exec $VMID -- chmod +x /etc/init.d/supervision
 pct exec $VMID -- rc-service supervision start
 pct exec $VMID -- rc-update add supervision
 
-sleep 2
+sleep 5
 
 echo ""
 echo "✅ Installation terminée!"
