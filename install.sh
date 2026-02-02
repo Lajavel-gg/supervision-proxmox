@@ -137,12 +137,12 @@ pct exec $VMID -- /app/venv/bin/pip install -r /app/requirements.txt
 echo "🔄 Configuration du démarrage automatique..."
 pct exec $VMID -- mkdir -p /var/log
 
-# Passer les credentials Proxmox via variables d'environnement
-pct exec $VMID -- sh -c 'cat > /etc/environment << EOF
-PROXMOX_HOST="$PROXMOX_HOST"
-PROXMOX_API_USER="$PROXMOX_API_USER"
-PROXMOX_API_TOKEN="$API_TOKEN_VALUE"
-EOF'
+# Passer les credentials Proxmox via variables d'environnement (avec échappement correct)
+pct exec $VMID -- sh -c "cat > /etc/environment << 'ENVEOF'
+PROXMOX_HOST=\"${PROXMOX_HOST}\"
+PROXMOX_API_USER=\"${PROXMOX_API_USER}\"
+PROXMOX_API_TOKEN=\"${API_TOKEN_VALUE}\"
+ENVEOF"
 
 # Ajouter la commande de lancement dans rc.local
 pct exec $VMID -- sh -c 'echo "#!/bin/sh" > /etc/rc.local'
@@ -152,7 +152,7 @@ pct exec $VMID -- sh -c 'echo "/app/venv/bin/python3 /app/app.py > /var/log/supe
 pct exec $VMID -- chmod +x /etc/rc.local
 
 # Lancer tout de suite pour le test
-pct exec $VMID -- sh -c 'source /etc/environment && /app/venv/bin/python3 /app/app.py > /dev/null 2>&1 &'
+pct exec $VMID -- sh -c "PROXMOX_HOST='${PROXMOX_HOST}' PROXMOX_API_USER='${PROXMOX_API_USER}' PROXMOX_API_TOKEN='${API_TOKEN_VALUE}' /app/venv/bin/python3 /app/app.py > /var/log/supervision.log 2>&1 &"
 
 sleep 5
 
