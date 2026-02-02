@@ -138,11 +138,24 @@ sleep 5
 echo ""
 echo "✅ Installation terminée!"
 echo ""
-IP_CONTAINER=$(pct exec $VMID -- ip addr show eth0 | grep "inet " | awk '{print $2}' | cut -d'/' -f1)
-echo "🌐 Accédez au dashboard: http://$IP_CONTAINER:5000"
+
+# Attendre un peu que tout soit stable
+sleep 2
+
+# Récupérer l'IP du container
+IP_CONTAINER=$(pct config $VMID | grep "^net0" | grep -oP '(?<=ip=)[^,]*' | cut -d'/' -f1)
+
+# Si pas d'IP statique, chercher l'IP dynamique
+if [ -z "$IP_CONTAINER" ] || [ "$IP_CONTAINER" = "dhcp" ]; then
+    IP_CONTAINER=$(pct exec $VMID -- ip -4 addr show eth0 | grep -oP '(?<=inet\s)\d+(\.\d+){3}' || echo "DHCP")
+fi
+
+echo "🌐 Dashboard disponible à: http://$IP_CONTAINER:5000"
 echo ""
-echo "Commandes utiles:"
-echo "  Voir les logs: pct exec $VMID -- tail -f /var/log/supervision.log"
-echo "  Arrêter: pct stop $VMID"
-echo "  Redémarrer: pct reboot $VMID"
-echo "  Supprimer: pct destroy $VMID --purge"
+echo "📝 Commandes utiles:"
+echo "   Voir les logs: pct exec $VMID -- tail -f /var/log/supervision.log"
+echo "   Status service: pct exec $VMID -- rc-service supervision status"
+echo "   Arrêter: pct stop $VMID"
+echo "   Redémarrer: pct reboot $VMID"
+echo "   Supprimer: pct destroy $VMID --purge"
+echo ""
