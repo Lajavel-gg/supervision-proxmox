@@ -33,7 +33,7 @@ echo "✅ ID disponible trouvé: $VMID"
 # ==================== TÉLÉCHARGER ALPINE ====================
 echo "🏗️  Préparation du template Alpine..."
 
-ALPINE_TEMPLATE="alpine-3.19-default_20231211_amd64.tar.zst"
+ALPINE_TEMPLATE="alpine-minirootfs-3.23.0-x86_64.tar.gz"
 TEMPLATE_DIR="/var/lib/vz/template/cache"
 TEMPLATE_PATH="$TEMPLATE_DIR/$ALPINE_TEMPLATE"
 
@@ -43,13 +43,13 @@ if [ -f "$TEMPLATE_PATH" ]; then
 else
     echo "📥 Template non trouvé localement"
     echo "   Téléchargement d'Alpine depuis Internet..."
-    echo "   (Cela peut prendre 3-5 minutes selon la connexion)"
+    echo "   (Cela peut prendre 2-3 minutes selon la connexion)"
     
     # Créer le répertoire s'il n'existe pas
     mkdir -p "$TEMPLATE_DIR"
     
-    # URL de téléchargement (depuis le CDN Proxmox)
-    DOWNLOAD_URL="https://download.proxmox.com/images/system/alpine-3.19-default_20231211_amd64.tar.zst"
+    # URL de téléchargement (depuis le CDN Alpine Linux officiel)
+    DOWNLOAD_URL="https://dl-cdn.alpinelinux.org/alpine/v3.23/releases/x86_64/alpine-minirootfs-3.23.0-x86_64.tar.gz"
     
     echo "📡 Téléchargement depuis: $DOWNLOAD_URL"
     
