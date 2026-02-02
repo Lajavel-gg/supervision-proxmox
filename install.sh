@@ -13,6 +13,8 @@ MEMORY=512
 CORES=1
 STORAGE="local-lvm"
 REPO_URL="https://github.com/Lajavel-gg/supervision-proxmox"
+PROXMOX_HOST="localhost"
+PROXMOX_API_USER="supervision@pve"
 # ===============================================
 
 echo "📥 Vérification des prérequis..."
@@ -21,7 +23,29 @@ if ! command -v pct &> /dev/null; then
     exit 1
 fi
 
-# ==================== TROUVER UN ID DISPONIBLE ====================
+# ==================== CRÉER L'USER API PROXMOX ====================
+echo "🔐 Configuration de l'API Proxmox..."
+
+# Générer un token aléatoire
+API_TOKEN="supervision-$(date +%s)"
+
+# Créer l'user Proxmox s'il n'existe pas
+if ! pveum user list | grep -q "$PROXMOX_API_USER"; then
+    echo "👤 Création de l'user Proxmox: $PROXMOX_API_USER"
+    pveum user add $PROXMOX_API_USER -comment "User API Supervision"
+else
+    echo "✅ User Proxmox existe déjà"
+fi
+
+# Créer le token API
+echo "🔑 Création du token API..."
+TOKEN_OUTPUT=$(pveum acl modify / --roles PVEVMUser --users $PROXMOX_API_USER 2>/dev/null || true)
+API_TOKEN_VALUE=$(pveum apitoken add $PROXMOX_API_USER supervision-token 2>/dev/null | grep "value" | awk '{print $2}' || echo "supervision-token")
+
+echo "✅ API Proxmox configurée"
+echo "   User: $PROXMOX_API_USER"
+echo "   Token: $API_TOKEN_VALUE"
+# ===================================================================
 echo "🔍 Recherche d'un ID de container disponible..."
 VMID=100
 while pct status $VMID &>/dev/null; do
@@ -113,13 +137,22 @@ pct exec $VMID -- /app/venv/bin/pip install -r /app/requirements.txt
 echo "🔄 Configuration du démarrage automatique..."
 pct exec $VMID -- mkdir -p /var/log
 
+# Passer les credentials Proxmox via variables d'environnement
+pct exec $VMID -- sh -c 'cat > /etc/environment << EOF
+PROXMOX_HOST="$PROXMOX_HOST"
+PROXMOX_API_USER="$PROXMOX_API_USER"
+PROXMOX_API_TOKEN="$API_TOKEN_VALUE"
+EOF'
+
 # Ajouter la commande de lancement dans rc.local
 pct exec $VMID -- sh -c 'echo "#!/bin/sh" > /etc/rc.local'
+pct exec $VMID -- sh -c 'echo "source /etc/environment" >> /etc/rc.local'
+pct exec $VMID -- sh -c 'echo "export PROXMOX_HOST PROXMOX_API_USER PROXMOX_API_TOKEN" >> /etc/rc.local'
 pct exec $VMID -- sh -c 'echo "/app/venv/bin/python3 /app/app.py > /var/log/supervision.log 2>&1 &" >> /etc/rc.local'
 pct exec $VMID -- chmod +x /etc/rc.local
 
 # Lancer tout de suite pour le test
-pct exec $VMID -- /app/venv/bin/python3 /app/app.py > /dev/null 2>&1 &
+pct exec $VMID -- sh -c 'source /etc/environment && /app/venv/bin/python3 /app/app.py > /dev/null 2>&1 &'
 
 sleep 5
 
