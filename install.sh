@@ -110,30 +110,10 @@ echo "📚 Installation dépendances Python..."
 pct exec $VMID -- python3 -m venv /app/venv
 pct exec $VMID -- /app/venv/bin/pip install -r /app/requirements.txt
 
-echo "🔄 Configuration du service..."
-pct exec $VMID -- mkdir -p /etc/init.d
-pct exec $VMID -- tee /etc/init.d/supervision > /dev/null << 'EOF'
-#!/sbin/openrc-run
+echo "🔄 Lancement de l'application..."
+pct exec $VMID -- sh -c 'nohup /app/venv/bin/python3 /app/app.py > /var/log/supervision.log 2>&1 &'
 
-description="Supervision Proxmox"
-command="/app/venv/bin/python3"
-command_args="/app/app.py"
-command_background=yes
-pidfile="/var/run/supervision.pid"
-stderr_file="/var/log/supervision.log"
-stdout_file="/var/log/supervision.log"
-
-depend() {
-    need net
-}
-
-EOF
-
-pct exec $VMID -- chmod +x /etc/init.d/supervision
-pct exec $VMID -- rc-service supervision start
-pct exec $VMID -- rc-update add supervision
-
-sleep 5
+sleep 3
 
 echo ""
 echo "✅ Installation terminée!"
@@ -154,7 +134,7 @@ echo "🌐 Dashboard disponible à: http://$IP_CONTAINER:5000"
 echo ""
 echo "📝 Commandes utiles:"
 echo "   Voir les logs: pct exec $VMID -- tail -f /var/log/supervision.log"
-echo "   Status service: pct exec $VMID -- rc-service supervision status"
+echo "   Vérifier si l'app tourne: pct exec $VMID -- ps aux | grep python3"
 echo "   Arrêter: pct stop $VMID"
 echo "   Redémarrer: pct reboot $VMID"
 echo "   Supprimer: pct destroy $VMID --purge"
