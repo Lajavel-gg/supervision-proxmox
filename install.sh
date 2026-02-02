@@ -7,7 +7,6 @@ set -e
 echo "🚀 Déploiement Supervision Proxmox (Alpine)..."
 
 # ==================== CONFIG ====================
-VMID=200
 HOSTNAME="supervision-proxmox"
 IP="dhcp"
 MEMORY=512
@@ -22,17 +21,14 @@ if ! command -v pct &> /dev/null; then
     exit 1
 fi
 
-# Vérifier si le container existe déjà
-if pct status $VMID &>/dev/null; then
-    echo "⚠️  Container $VMID existe déjà"
-    echo "Voulez-vous continuer? (y/n)"
-    read -r response
-    if [[ ! "$response" =~ ^[Yy]$ ]]; then
-        echo "Annulation"
-        exit 0
-    fi
-    pct destroy $VMID --purge
-fi
+# ==================== TROUVER UN ID DISPONIBLE ====================
+echo "🔍 Recherche d'un ID de container disponible..."
+VMID=100
+while pct status $VMID &>/dev/null; do
+    VMID=$((VMID + 1))
+done
+echo "✅ ID disponible trouvé: $VMID"
+# ==================================================================
 
 echo "🏗️  Création du container LXC Alpine..."
 pct create $VMID local:vztmpl/alpine-3.19-default_20231211_amd64.tar.zst \
@@ -91,3 +87,4 @@ echo "Commandes utiles:"
 echo "  Voir les logs: pct exec $VMID -- tail -f /var/log/supervision.log"
 echo "  Arrêter: pct stop $VMID"
 echo "  Redémarrer: pct reboot $VMID"
+echo "  Supprimer: pct destroy $VMID --purge"
