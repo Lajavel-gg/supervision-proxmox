@@ -31,28 +31,28 @@ echo "✅ ID disponible trouvé: $VMID"
 # ==================================================================
 
 echo "🏗️  Vérification du template Alpine..."
-ALPINE_TEMPLATE="alpine-3.19-default_20231211_amd64.tar.zst"
 
-# Vérifier si le template existe
-if ! pveam list local 2>/dev/null | grep -q "$ALPINE_TEMPLATE"; then
-    echo "📥 Template Alpine non trouvé, téléchargement en cours..."
-    echo "   (Cela peut prendre quelques minutes...)"
-    pveam download local $ALPINE_TEMPLATE || {
-        echo "⚠️  Téléchargement du template spécifique échoué"
-        echo "🔍 Recherche d'une version Alpine disponible..."
-        ALPINE_TEMPLATE=$(pveam list content | grep -i alpine | grep amd64 | head -1 | awk '{print $1}')
-        
-        if [ -z "$ALPINE_TEMPLATE" ]; then
-            echo "❌ Aucun template Alpine trouvé"
-            exit 1
-        fi
-        
-        echo "📥 Téléchargement de $ALPINE_TEMPLATE..."
-        pveam download local $ALPINE_TEMPLATE
-    }
+# Chercher dans les templates déjà téléchargés
+ALPINE_TEMPLATE=$(pveam list local 2>/dev/null | grep -i alpine | grep amd64 | head -1 | awk '{print $1}' | sed 's|local:vztmpl/||')
+
+if [ -z "$ALPINE_TEMPLATE" ]; then
+    echo "📥 Aucun template Alpine trouvé localement"
+    echo "   Recherche des templates disponibles en ligne..."
+    
+    # Chercher dans les templates disponibles
+    ALPINE_TEMPLATE=$(pveam list content 2>/dev/null | grep -i "alpine.*amd64" | head -1 | awk '{print $1}')
+    
+    if [ -z "$ALPINE_TEMPLATE" ]; then
+        echo "❌ Aucun template Alpine trouvé"
+        echo "   Veuillez télécharger manuellement via l'interface Proxmox"
+        exit 1
+    fi
+    
+    echo "📥 Téléchargement de $ALPINE_TEMPLATE..."
+    pveam download local $ALPINE_TEMPLATE
 fi
 
-echo "✅ Template Alpine disponible: $ALPINE_TEMPLATE"
+echo "✅ Template Alpine: $ALPINE_TEMPLATE"
 echo "🏗️  Création du container LXC Alpine..."
 pct create $VMID local:vztmpl/$ALPINE_TEMPLATE \
   -hostname $HOSTNAME \
