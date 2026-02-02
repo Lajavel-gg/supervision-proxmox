@@ -107,7 +107,7 @@ echo "📦 Clonage du repo..."
 pct exec $VMID -- git clone $REPO_URL /app
 
 echo "📚 Installation dépendances Python..."
-pct exec $VMID -- pip3 install --no-cache-dir -r /app/requirements.txt
+pct exec $VMID -- pip3 install --break-system-packages -r /app/requirements.txt
 
 echo "🔄 Configuration du service..."
 pct exec $VMID -- tee /etc/init.d/supervision > /dev/null << 'EOF'
