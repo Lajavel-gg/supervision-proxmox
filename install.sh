@@ -30,8 +30,31 @@ done
 echo "✅ ID disponible trouvé: $VMID"
 # ==================================================================
 
+echo "🏗️  Vérification du template Alpine..."
+ALPINE_TEMPLATE="alpine-3.19-default_20231211_amd64.tar.zst"
+
+# Vérifier si le template existe
+if ! pveam list local 2>/dev/null | grep -q "$ALPINE_TEMPLATE"; then
+    echo "📥 Template Alpine non trouvé, téléchargement en cours..."
+    echo "   (Cela peut prendre quelques minutes...)"
+    pveam download local $ALPINE_TEMPLATE || {
+        echo "⚠️  Téléchargement du template spécifique échoué"
+        echo "🔍 Recherche d'une version Alpine disponible..."
+        ALPINE_TEMPLATE=$(pveam list content | grep -i alpine | grep amd64 | head -1 | awk '{print $1}')
+        
+        if [ -z "$ALPINE_TEMPLATE" ]; then
+            echo "❌ Aucun template Alpine trouvé"
+            exit 1
+        fi
+        
+        echo "📥 Téléchargement de $ALPINE_TEMPLATE..."
+        pveam download local $ALPINE_TEMPLATE
+    }
+fi
+
+echo "✅ Template Alpine disponible: $ALPINE_TEMPLATE"
 echo "🏗️  Création du container LXC Alpine..."
-pct create $VMID local:vztmpl/alpine-3.19-default_20231211_amd64.tar.zst \
+pct create $VMID local:vztmpl/$ALPINE_TEMPLATE \
   -hostname $HOSTNAME \
   -net0 name=eth0,ip=$IP,bridge=vmbr0 \
   -memory $MEMORY \
