@@ -101,7 +101,7 @@ sleep 2
 echo "✅ Interface réseau prête"
 echo "🔧 Configuration Alpine..."
 pct exec $VMID -- apk update
-pct exec $VMID -- apk add --no-cache python3 py3-pip git curl bash
+pct exec $VMID -- apk add --no-cache python3 py3-pip git curl bash openrc
 
 echo "📦 Clonage du repo..."
 pct exec $VMID -- git clone $REPO_URL /app
@@ -111,6 +111,7 @@ pct exec $VMID -- python3 -m venv /app/venv
 pct exec $VMID -- /app/venv/bin/pip install -r /app/requirements.txt
 
 echo "🔄 Configuration du service..."
+pct exec $VMID -- mkdir -p /etc/init.d
 pct exec $VMID -- tee /etc/init.d/supervision > /dev/null << 'EOF'
 #!/sbin/openrc-run
 
@@ -138,7 +139,7 @@ echo ""
 echo "✅ Installation terminée!"
 echo ""
 IP_CONTAINER=$(pct exec $VMID -- ip addr show eth0 | grep "inet " | awk '{print $2}' | cut -d'/' -f1)
-echo "🌐 Accédez à: http://$IP_CONTAINER:5000"
+echo "🌐 Accédez au dashboard: http://$IP_CONTAINER:5000"
 echo ""
 echo "Commandes utiles:"
 echo "  Voir les logs: pct exec $VMID -- tail -f /var/log/supervision.log"
