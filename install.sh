@@ -110,8 +110,19 @@ echo "📚 Installation dépendances Python..."
 pct exec $VMID -- python3 -m venv /app/venv
 pct exec $VMID -- /app/venv/bin/pip install -r /app/requirements.txt
 
-echo "🔄 Lancement de l'application..."
-pct exec $VMID -- sh -c 'nohup /app/venv/bin/python3 /app/app.py > /var/log/supervision.log 2>&1 &'
+echo "🔄 Création du script de démarrage..."
+pct exec $VMID -- mkdir -p /var/log
+
+# Créer un script simple qui lance l'app au démarrage
+pct exec $VMID -- tee /etc/local.d/supervision.start > /dev/null << 'EOF'
+#!/bin/sh
+/app/venv/bin/python3 /app/app.py > /var/log/supervision.log 2>&1 &
+EOF
+
+pct exec $VMID -- chmod +x /etc/local.d/supervision.start
+
+# Lancer tout de suite
+pct exec $VMID -- /etc/local.d/supervision.start
 
 sleep 3
 
