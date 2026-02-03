@@ -1,0 +1,66 @@
+---
+- name: Configuration du conteneur LXC Alpine – Supervision Proxmox
+  hosts: lxc
+  become: true
+
+  vars:
+    app_dir: /opt/supervision-proxmox
+    venv_dir: /opt/supervision-proxmox/venv
+    log_file: /var/log/supervision.log
+
+  tasks:
+
+    - name: Mise à jour de l’index des paquets
+      apk:
+        update_cache: yes
+
+    - name: Installation des paquets nécessaires
+      apk:
+        name:
+          - python3
+          - py3-pip
+          - py3-virtualenv
+          - git
+          - curl
+          - bash
+          - openrc
+        state: present
+
+    - name: Créer le dossier de l’application
+      file:
+        path: "{{ app_dir }}"
+        state: directory
+        mode: "0755"
+
+    - name: Copier les fichiers de l’application
+      copy:
+        src: files/
+        dest: "{{ app_dir }}/"
+        mode: "0755"
+
+    - name: Créer l’environnement virtuel Python
+      command: python3 -m venv {{ venv_dir }}
+      args:
+        creates: "{{ venv_dir }}"
+
+    - name: Installer les dépendances Python
+      pip:
+        requirements: "{{ app_dir }}/requirements.txt"
+        virtualenv: "{{ venv_dir }}"
+
+    - name: Créer le fichier rc.local pour démarrage automatique
+      copy:
+        dest: /etc/rc.local
+        mode: "0755"
+        content: |
+          #!/bin/sh
+          {{ venv_dir }}/bin/python {{ app_dir }}/app.py >> {{ log_file }} 2>&1 &
+          exit 0
+
+    - name: Activer rc.local au démarrage
+      command: rc-update add local default
+      ignore_errors: yes
+
+    - name: Lancer l’application immédiatement
+      shell: |
+        {{ venv_dir }}/bin/python {{ app_dir }}/app.py >> {{ log_file }} 2>&1 &
