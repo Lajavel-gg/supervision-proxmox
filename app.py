@@ -13,6 +13,7 @@ from flask import Flask, render_template, jsonify
 # Configuration Proxmox depuis les variables d'environnement
 PROXMOX_HOST = os.getenv("PROXMOX_HOST", "localhost")
 PROXMOX_API_USER = os.getenv("PROXMOX_API_USER", "root@pam")
+PROXMOX_API_TOKEN_NAME = os.getenv("PROXMOX_API_TOKEN_NAME", "")
 PROXMOX_API_TOKEN = os.getenv("PROXMOX_API_TOKEN", "")
 
 # URL de l'API Proxmox
@@ -26,9 +27,9 @@ requests.packages.urllib3.disable_warnings()
 def get_proxmox_vms():
     """Récupérer la liste des VMs depuis l'API Proxmox avec le token"""
     try:
-        # Headers avec le token API
+        # Headers avec le token API (format: PVEAPIToken=USER@REALM!TOKENID=UUID)
         headers = {
-            "Authorization": f"PVEAPIToken={PROXMOX_API_USER}={PROXMOX_API_TOKEN}"
+            "Authorization": f"PVEAPIToken={PROXMOX_API_USER}!{PROXMOX_API_TOKEN_NAME}={PROXMOX_API_TOKEN}"
         }
         
         # Récupérer les nœuds

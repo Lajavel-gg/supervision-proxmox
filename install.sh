@@ -178,6 +178,7 @@ pct exec $VMID -- chmod +x /usr/local/bin/start-supervision.sh
 pct exec $VMID -- sh -c "cat > /etc/supervision.env << 'ENV_FILE'
 export PROXMOX_HOST=\"${PROXMOX_HOST}\"
 export PROXMOX_API_USER=\"${PROXMOX_API_USER}\"
+export PROXMOX_API_TOKEN_NAME=\"${TOKEN_NAME}\"
 export PROXMOX_API_TOKEN=\"${API_TOKEN_VALUE}\"
 ENV_FILE"
 
