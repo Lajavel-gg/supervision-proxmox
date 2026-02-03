@@ -40,9 +40,12 @@ fi
 echo "🔑 Attribution des permissions..."
 pveum acl modify / --roles PVEVMUser --users $PROXMOX_API_USER 2>/dev/null || true
 
-# Créer le token API
-echo "🔑 Création du token API..."
-API_TOKEN_VALUE=$(pveum user token add $PROXMOX_API_USER supervision-token 2>/dev/null | grep "value" | awk '{print $NF}')
+# Créer le token API avec un nom unique
+TOKEN_NAME="supervision-$(date +%s)"
+echo "🔑 Création du token API: $TOKEN_NAME"
+
+# Extraire le token correctement (c'est un UUID au format xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
+API_TOKEN_VALUE=$(pveum user token add $PROXMOX_API_USER $TOKEN_NAME 2>/dev/null | grep -oP '[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}')
 
 if [ -z "$API_TOKEN_VALUE" ]; then
     echo "⚠️  Impossible de créer le token automatiquement"
