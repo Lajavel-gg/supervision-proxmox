@@ -187,26 +187,31 @@ pct exec $VMID -- sh -c 'cat > /etc/rc.local << "RCLOCAL_FILE"
 #!/bin/sh
 # Source les variables d environnement (avec export)
 [ -f /etc/supervision.env ] && . /etc/supervision.env
-# Lancer Python directement EN ARRIÈRE-PLAN
-nohup /app/venv/bin/python3 /app/app.py > /var/log/supervision.log 2>&1 &
+# Lancer Python avec setsid pour détacher complètement
+setsid /app/venv/bin/python3 /app/app.py > /var/log/supervision.log 2>&1 &
 exit 0
 RCLOCAL_FILE'
 
 pct exec $VMID -- chmod +x /etc/rc.local
 
-# Lancer l'app immédiatement en ARRIÈRE-PLAN
+# Activer le service local pour que rc.local soit exécuté au boot
+pct exec $VMID -- rc-update add local default 2>/dev/null || true
+
+# Installer setsid pour détacher le processus
+pct exec $VMID -- apk add --no-cache util-linux > /dev/null 2>&1
+
+# Lancer l'app immédiatement en ARRIÈRE-PLAN (setsid détache complètement le processus)
 echo "🚀 Lancement de l'application..."
-pct exec $VMID -- sh -c ". /etc/supervision.env && nohup /app/venv/bin/python3 /app/app.py > /var/log/supervision.log 2>&1 &"
+pct exec $VMID -- sh -c ". /etc/supervision.env && setsid /app/venv/bin/python3 /app/app.py > /var/log/supervision.log 2>&1 &"
 
 # Attendre que l'app démarre
-sleep 3
+sleep 4
 
 # Vérifier que l'app tourne
 if pct exec $VMID -- pgrep -f "python3 /app/app.py" > /dev/null; then
     echo "✅ Application démarrée avec succès!"
 else
-    echo "⚠️  L'application ne semble pas avoir démarré. Vérifiez les logs:"
-    echo "   pct exec $VMID -- cat /var/log/supervision.log"
+    echo "⚠️  L'application ne semble pas avoir démarré automatiquement."
 fi
 
 echo ""
@@ -224,9 +229,12 @@ fi
 echo "🌐 Dashboard disponible à: http://$IP_CONTAINER:5000"
 echo ""
 echo "📝 Commandes utiles:"
+echo "   Démarrer manuellement: pct exec $VMID -- sh -c '. /etc/supervision.env && /app/venv/bin/python3 /app/app.py'"
+echo "   Démarrer en arrière-plan: pct exec $VMID -- sh -c '. /etc/supervision.env && setsid /app/venv/bin/python3 /app/app.py > /var/log/supervision.log 2>&1 &'"
 echo "   Voir les logs: pct exec $VMID -- tail -f /var/log/supervision.log"
 echo "   Vérifier si l'app tourne: pct exec $VMID -- ps aux | grep python3"
-echo "   Arrêter: pct stop $VMID"
-echo "   Redémarrer: pct reboot $VMID"
-echo "   Supprimer: pct destroy $VMID --purge"
+echo "   Arrêter l'app: pct exec $VMID -- pkill -f 'python3 /app/app.py'"
+echo "   Arrêter le container: pct stop $VMID"
+echo "   Redémarrer le container: pct reboot $VMID"
+echo "   Supprimer le container: pct destroy $VMID --purge"
 echo ""
