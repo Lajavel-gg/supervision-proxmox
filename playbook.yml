@@ -17,7 +17,6 @@
         name:
           - python3
           - py3-pip
-          - git
           - curl
           - bash
           - openrc
@@ -26,14 +25,13 @@
     - name: Créer le dossier de l'application
       file:
         path: "{{ app_dir }}"
-        tate: directory
+        state: directory
 
     - name: Copier les fichiers de l'application
       copy:
         src: files/
         dest: "{{ app_dir }}/"
         mode: "0755"
-
 
     - name: Créer l'environnement virtuel Python
       command: python3 -m venv {{ venv_dir }}
