@@ -104,6 +104,25 @@ python3 app.py
 
 Accédez à `http://localhost:5000`
 
+## 🔄 Mise a jour
+
+Pour mettre a jour l'application sans reinstaller (remplacez `VMID` par l'ID de votre container):
+
+```bash
+# Mettre a jour le code depuis GitHub
+pct exec VMID -- git -C /app pull
+
+# Redemarrer l'application
+pct exec VMID -- pkill -f "python3 /app/app.py"
+pct exec VMID -- sh -c ". /etc/supervision.env && setsid /app/venv/bin/python3 /app/app.py > /var/log/supervision.log 2>&1 &"
+```
+
+Ou en une seule commande:
+
+```bash
+pct exec VMID -- sh -c "git -C /app pull && pkill -f 'python3 /app/app.py'; . /etc/supervision.env && setsid /app/venv/bin/python3 /app/app.py > /var/log/supervision.log 2>&1 &"
+```
+
 ## 🛠️ Troubleshooting
 
 ### Voir les logs
