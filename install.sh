@@ -23,7 +23,14 @@ if ! command -v pct &> /dev/null; then
     exit 1
 fi
 
-# ==================== CRÉER L'USER API PROXMOX ====================
+# ==================== DÉTECTER L'IP PROXMOX ====================
+echo "🔍 Détection de l'adresse IP Proxmox..."
+PROXMOX_HOST=$(hostname -I | awk '{print $1}')
+if [ -z "$PROXMOX_HOST" ]; then
+    PROXMOX_HOST="127.0.0.1"
+fi
+echo "✅ IP Proxmox détectée: $PROXMOX_HOST"
+# ==================================================================
 echo "🔐 Configuration de l'API Proxmox..."
 
 PROXMOX_API_USER="supervision@pve"
@@ -147,22 +154,46 @@ pct exec $VMID -- /app/venv/bin/pip install -r /app/requirements.txt
 echo "🔄 Configuration du démarrage automatique..."
 pct exec $VMID -- mkdir -p /var/log
 
-# Passer les credentials Proxmox via variables d'environnement (avec échappement correct)
-pct exec $VMID -- sh -c "cat > /etc/environment << 'ENVEOF'
+# Créer un script de startup simple et efficace
+pct exec $VMID -- tee /usr/local/bin/start-supervision.sh > /dev/null << 'STARTUP_SCRIPT'
+#!/bin/sh
+# Script de démarrage pour Supervision Proxmox
+
+# Définir les variables d'environnement
+export PROXMOX_HOST="${PROXMOX_HOST:-localhost}"
+export PROXMOX_API_USER="${PROXMOX_API_USER:-supervision@pve}"
+export PROXMOX_API_TOKEN="${PROXMOX_API_TOKEN:-}"
+
+# Lancer l'app
+/app/venv/bin/python3 /app/app.py > /var/log/supervision.log 2>&1 &
+
+# Sauvegarder le PID
+echo $! > /var/run/supervision.pid
+STARTUP_SCRIPT
+
+pct exec $VMID -- chmod +x /usr/local/bin/start-supervision.sh
+
+# Écrire les variables dans le fichier d'environnement
+pct exec $VMID -- sh -c "cat > /etc/supervision.env << 'ENV_FILE'
 PROXMOX_HOST=\"${PROXMOX_HOST}\"
 PROXMOX_API_USER=\"${PROXMOX_API_USER}\"
 PROXMOX_API_TOKEN=\"${API_TOKEN_VALUE}\"
-ENVEOF"
+ENV_FILE"
 
-# Ajouter la commande de lancement dans rc.local
-pct exec $VMID -- sh -c 'echo "#!/bin/sh" > /etc/rc.local'
-pct exec $VMID -- sh -c 'echo "source /etc/environment" >> /etc/rc.local'
-pct exec $VMID -- sh -c 'echo "export PROXMOX_HOST PROXMOX_API_USER PROXMOX_API_TOKEN" >> /etc/rc.local'
-pct exec $VMID -- sh -c 'echo "/app/venv/bin/python3 /app/app.py > /var/log/supervision.log 2>&1 &" >> /etc/rc.local'
+# Créer un vrai rc.local qui source les variables ET lance le script
+pct exec $VMID -- sh -c 'cat > /etc/rc.local << "RCLOCAL_FILE"
+#!/bin/sh
+# Source les variables d environnement
+[ -f /etc/supervision.env ] && . /etc/supervision.env
+# Lancer le script
+/usr/local/bin/start-supervision.sh
+exit 0
+RCLOCAL_FILE'
+
 pct exec $VMID -- chmod +x /etc/rc.local
 
-# Lancer tout de suite pour le test
-pct exec $VMID -- sh -c "PROXMOX_HOST='${PROXMOX_HOST}' PROXMOX_API_USER='${PROXMOX_API_USER}' PROXMOX_API_TOKEN='${API_TOKEN_VALUE}' /app/venv/bin/python3 /app/app.py > /var/log/supervision.log 2>&1 &"
+# Lancer l'app immédiatement pour tester
+pct exec $VMID -- sh -c "PROXMOX_HOST='${PROXMOX_HOST}' PROXMOX_API_USER='${PROXMOX_API_USER}' PROXMOX_API_TOKEN='${API_TOKEN_VALUE}' /usr/local/bin/start-supervision.sh"
 
 sleep 5
 
