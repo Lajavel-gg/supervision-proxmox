@@ -174,28 +174,28 @@ STARTUP_SCRIPT
 
 pct exec $VMID -- chmod +x /usr/local/bin/start-supervision.sh
 
-# Écrire les variables dans le fichier d'environnement
+# Écrire les variables dans le fichier d'environnement (avec export!)
 pct exec $VMID -- sh -c "cat > /etc/supervision.env << 'ENV_FILE'
-PROXMOX_HOST=\"${PROXMOX_HOST}\"
-PROXMOX_API_USER=\"${PROXMOX_API_USER}\"
-PROXMOX_API_TOKEN=\"${API_TOKEN_VALUE}\"
+export PROXMOX_HOST=\"${PROXMOX_HOST}\"
+export PROXMOX_API_USER=\"${PROXMOX_API_USER}\"
+export PROXMOX_API_TOKEN=\"${API_TOKEN_VALUE}\"
 ENV_FILE"
 
-# Créer un vrai rc.local qui source les variables ET lance le script EN ARRIÈRE-PLAN
+# Créer un vrai rc.local qui source les variables ET lance l'app EN ARRIÈRE-PLAN
 pct exec $VMID -- sh -c 'cat > /etc/rc.local << "RCLOCAL_FILE"
 #!/bin/sh
-# Source les variables d environnement
+# Source les variables d environnement (avec export)
 [ -f /etc/supervision.env ] && . /etc/supervision.env
-# Lancer le script EN ARRIÈRE-PLAN (& à la fin)
-nohup /usr/local/bin/start-supervision.sh &
+# Lancer Python directement EN ARRIÈRE-PLAN
+nohup /app/venv/bin/python3 /app/app.py > /var/log/supervision.log 2>&1 &
 exit 0
 RCLOCAL_FILE'
 
 pct exec $VMID -- chmod +x /etc/rc.local
 
-# Lancer l'app immédiatement en ARRIÈRE-PLAN (& à la fin)
+# Lancer l'app immédiatement en ARRIÈRE-PLAN
 echo "🚀 Lancement de l'application..."
-pct exec $VMID -- sh -c "PROXMOX_HOST='${PROXMOX_HOST}' PROXMOX_API_USER='${PROXMOX_API_USER}' PROXMOX_API_TOKEN='${API_TOKEN_VALUE}' nohup /usr/local/bin/start-supervision.sh &"
+pct exec $VMID -- sh -c ". /etc/supervision.env && nohup /app/venv/bin/python3 /app/app.py > /var/log/supervision.log 2>&1 &"
 
 # Attendre que l'app démarre
 sleep 3
