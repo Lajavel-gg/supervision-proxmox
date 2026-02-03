@@ -154,21 +154,21 @@ pct exec $VMID -- /app/venv/bin/pip install -r /app/requirements.txt
 echo "🔄 Configuration du démarrage automatique..."
 pct exec $VMID -- mkdir -p /var/log
 
-# Créer un script de startup simple et efficace
+# Créer un script de startup qui passe les variables CORRECTEMENT à Python
 pct exec $VMID -- tee /usr/local/bin/start-supervision.sh > /dev/null << 'STARTUP_SCRIPT'
 #!/bin/sh
 # Script de démarrage pour Supervision Proxmox
 
-# Définir les variables d'environnement
-export PROXMOX_HOST="${PROXMOX_HOST:-localhost}"
-export PROXMOX_API_USER="${PROXMOX_API_USER:-supervision@pve}"
-export PROXMOX_API_TOKEN="${PROXMOX_API_TOKEN:-}"
+# Source les variables d'environnement
+if [ -f /etc/supervision.env ]; then
+    . /etc/supervision.env
+fi
 
-# Lancer l'app
-/app/venv/bin/python3 /app/app.py > /var/log/supervision.log 2>&1 &
-
-# Sauvegarder le PID
-echo $! > /var/run/supervision.pid
+# Passer les variables EXPLICITEMENT à Python via exec
+exec env PROXMOX_HOST="${PROXMOX_HOST:-localhost}" \
+         PROXMOX_API_USER="${PROXMOX_API_USER:-supervision@pve}" \
+         PROXMOX_API_TOKEN="${PROXMOX_API_TOKEN:-}" \
+         /app/venv/bin/python3 /app/app.py > /var/log/supervision.log 2>&1
 STARTUP_SCRIPT
 
 pct exec $VMID -- chmod +x /usr/local/bin/start-supervision.sh
