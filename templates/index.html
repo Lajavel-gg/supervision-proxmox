@@ -3,8 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Supervision Proxmox</title>
+    <title>PROXMOX // CONTROL CENTER</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --bg-primary: #0a0e14;
+            --bg-secondary: #0d1117;
+            --bg-card: rgba(13, 17, 23, 0.85);
+            --accent-cyan: #00f0ff;
+            --accent-green: #00ff9d;
+            --accent-orange: #ff9500;
+            --accent-red: #ff3366;
+            --accent-purple: #a855f7;
+            --text-primary: #e6edf3;
+            --text-secondary: #8b949e;
+            --border-color: rgba(0, 240, 255, 0.15);
+            --glow-cyan: 0 0 20px rgba(0, 240, 255, 0.3);
+            --glow-green: 0 0 20px rgba(0, 255, 157, 0.3);
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -12,178 +31,485 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            font-family: 'JetBrains Mono', monospace;
+            background: var(--bg-primary);
             min-height: 100vh;
-            padding: 20px;
-            color: #fff;
+            color: var(--text-primary);
+            overflow-x: hidden;
+        }
+
+        /* Animated Grid Background */
+        .grid-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            background-image:
+                linear-gradient(rgba(0, 240, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 240, 255, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            animation: gridMove 20s linear infinite;
+        }
+
+        @keyframes gridMove {
+            0% { background-position: 0 0; }
+            100% { background-position: 50px 50px; }
+        }
+
+        /* Scanline Effect */
+        .scanlines {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+            background: repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 2px,
+                rgba(0, 0, 0, 0.1) 2px,
+                rgba(0, 0, 0, 0.1) 4px
+            );
+            opacity: 0.4;
         }
 
         .container {
-            max-width: 1600px;
+            position: relative;
+            z-index: 2;
+            max-width: 1800px;
             margin: 0 auto;
+            padding: 30px;
         }
 
-        /* HEADER */
+        /* Header */
         header {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            padding: 20px 25px;
-            border-radius: 12px;
-            margin-bottom: 25px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 25px 30px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            margin-bottom: 30px;
+            position: relative;
+            overflow: hidden;
+            animation: slideDown 0.6s ease-out;
         }
 
-        header h1 {
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--accent-cyan), transparent);
+        }
+
+        header::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--accent-cyan) 50%, transparent);
+            opacity: 0.5;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .logo-icon {
+            width: 50px;
+            height: 50px;
+            border: 2px solid var(--accent-cyan);
+            display: flex;
+            align-items: center;
+            justify-content: center;
             font-size: 24px;
+            position: relative;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { box-shadow: var(--glow-cyan); }
+            50% { box-shadow: 0 0 30px rgba(0, 240, 255, 0.5); }
+        }
+
+        .logo-icon::before {
+            content: '';
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: var(--accent-cyan);
+            top: -4px;
+            right: -4px;
+        }
+
+        .logo h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: 4px;
+            background: linear-gradient(135deg, var(--text-primary), var(--accent-cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .logo .subtitle {
+            font-size: 11px;
+            color: var(--text-secondary);
+            letter-spacing: 3px;
+            margin-top: 4px;
+            text-transform: uppercase;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 25px;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 20px;
+            background: rgba(0, 255, 157, 0.1);
+            border: 1px solid rgba(0, 255, 157, 0.3);
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            background: var(--accent-green);
+            border-radius: 50%;
+            animation: blink 1.5s ease-in-out infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; box-shadow: 0 0 10px var(--accent-green); }
+            50% { opacity: 0.5; box-shadow: none; }
+        }
+
+        .status-text {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--accent-green);
+        }
+
+        .refresh-btn {
+            background: transparent;
+            border: 1px solid var(--accent-cyan);
+            color: var(--accent-cyan);
+            padding: 12px 24px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 12px;
+            letter-spacing: 2px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .refresh-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0, 240, 255, 0.2), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .refresh-btn:hover::before {
+            left: 100%;
+        }
+
+        .refresh-btn:hover {
+            background: rgba(0, 240, 255, 0.1);
+            box-shadow: var(--glow-cyan);
+        }
+
+        .last-update {
+            font-size: 11px;
+            color: var(--text-secondary);
+            text-align: right;
+        }
+
+        .last-update span {
+            color: var(--accent-cyan);
+            font-weight: 500;
+        }
+
+        /* Main Grid Layout */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        /* Section Panels */
+        .panel {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            position: relative;
+            animation: fadeIn 0.8s ease-out;
+            animation-fill-mode: both;
+        }
+
+        .panel:nth-child(1) { animation-delay: 0.1s; }
+        .panel:nth-child(2) { animation-delay: 0.2s; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .panel::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent-cyan), var(--accent-purple), var(--accent-cyan));
+        }
+
+        .panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px 25px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .panel-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 14px;
+            letter-spacing: 3px;
+            text-transform: uppercase;
             display: flex;
             align-items: center;
             gap: 12px;
         }
 
-        .last-update {
-            color: rgba(255, 255, 255, 0.7);
-            font-size: 14px;
+        .panel-title::before {
+            content: '';
+            width: 4px;
+            height: 20px;
+            background: var(--accent-cyan);
         }
 
-        /* NODE STATUS */
-        .node-section {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(10px);
-            padding: 20px;
-            border-radius: 12px;
-            margin-bottom: 25px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+        .panel-body {
+            padding: 25px;
         }
 
-        .node-section h2 {
-            margin-bottom: 20px;
-            font-size: 18px;
-            color: rgba(255, 255, 255, 0.9);
-        }
-
+        /* Node Section */
         .node-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
             gap: 20px;
         }
 
         .node-card {
-            background: rgba(255, 255, 255, 0.08);
-            padding: 20px;
-            border-radius: 10px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(0, 240, 255, 0.03);
+            border: 1px solid var(--border-color);
+            padding: 25px;
+            position: relative;
         }
 
-        .node-card h3 {
-            font-size: 16px;
-            margin-bottom: 15px;
+        .node-header {
             display: flex;
             align-items: center;
-            gap: 8px;
-        }
-
-        .node-card .status-dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            background: #10b981;
-        }
-
-        .node-card .status-dot.offline {
-            background: #ef4444;
-        }
-
-        .gauge-container {
-            margin-bottom: 15px;
-        }
-
-        .gauge-label {
-            display: flex;
             justify-content: space-between;
-            margin-bottom: 5px;
-            font-size: 13px;
-            color: rgba(255, 255, 255, 0.7);
-        }
-
-        .gauge-bar {
-            height: 8px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 4px;
-            overflow: hidden;
-        }
-
-        .gauge-fill {
-            height: 100%;
-            border-radius: 4px;
-            transition: width 0.5s ease;
-        }
-
-        .gauge-fill.cpu { background: linear-gradient(90deg, #3b82f6, #8b5cf6); }
-        .gauge-fill.ram { background: linear-gradient(90deg, #10b981, #34d399); }
-        .gauge-fill.disk { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
-
-        .node-info {
-            font-size: 12px;
-            color: rgba(255, 255, 255, 0.6);
-            margin-top: 10px;
-        }
-
-        /* STATS CARDS */
-        .stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 15px;
             margin-bottom: 25px;
         }
 
-        .stat-card {
-            background: rgba(255, 255, 255, 0.08);
-            backdrop-filter: blur(10px);
-            padding: 20px;
-            border-radius: 12px;
+        .node-name {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 18px;
+            letter-spacing: 2px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .node-status {
+            width: 12px;
+            height: 12px;
+            background: var(--accent-green);
+            border-radius: 50%;
+            box-shadow: 0 0 15px var(--accent-green);
+        }
+
+        .node-status.offline {
+            background: var(--accent-red);
+            box-shadow: 0 0 15px var(--accent-red);
+        }
+
+        .node-uptime {
+            font-size: 12px;
+            color: var(--text-secondary);
+            padding: 6px 14px;
+            background: rgba(0, 240, 255, 0.1);
+            border: 1px solid var(--border-color);
+        }
+
+        /* Circular Gauges */
+        .gauges-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+
+        .gauge-item {
             text-align: center;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            transition: transform 0.3s ease;
+        }
+
+        .circular-gauge {
+            position: relative;
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 15px;
+        }
+
+        .gauge-bg {
+            fill: none;
+            stroke: rgba(255, 255, 255, 0.05);
+            stroke-width: 8;
+        }
+
+        .gauge-progress {
+            fill: none;
+            stroke-width: 8;
+            stroke-linecap: round;
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+            transition: stroke-dashoffset 0.8s ease;
+        }
+
+        .gauge-progress.cpu { stroke: url(#cpuGradient); }
+        .gauge-progress.ram { stroke: url(#ramGradient); }
+        .gauge-progress.disk { stroke: url(#diskGradient); }
+
+        .gauge-center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+
+        .gauge-value {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .gauge-unit {
+            font-size: 10px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .gauge-label {
+            font-size: 11px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .gauge-detail {
+            font-size: 10px;
+            color: var(--accent-cyan);
+            margin-top: 4px;
+        }
+
+        /* Stats Section */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, rgba(0, 240, 255, 0.05), transparent);
+            border: 1px solid var(--border-color);
+            padding: 30px 20px;
+            text-align: center;
+            position: relative;
+            transition: all 0.3s ease;
         }
 
         .stat-card:hover {
-            transform: translateY(-3px);
+            border-color: var(--accent-cyan);
+            transform: translateY(-5px);
         }
 
-        .stat-card h3 {
-            color: rgba(255, 255, 255, 0.7);
-            font-size: 12px;
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--accent-cyan), transparent);
+        }
+
+        .stat-icon {
+            font-size: 28px;
+            margin-bottom: 15px;
+            opacity: 0.8;
+        }
+
+        .stat-value {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 48px;
+            font-weight: 700;
+            line-height: 1;
+            margin-bottom: 10px;
+        }
+
+        .stat-card.total .stat-value { color: var(--accent-cyan); }
+        .stat-card.running .stat-value { color: var(--accent-green); }
+        .stat-card.stopped .stat-value { color: var(--accent-red); }
+
+        .stat-label {
+            font-size: 11px;
+            color: var(--text-secondary);
             text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 8px;
+            letter-spacing: 3px;
         }
 
-        .stat-card .number {
-            font-size: 32px;
-            font-weight: bold;
+        /* Table Section */
+        .table-panel {
+            animation: fadeIn 0.8s ease-out 0.3s;
+            animation-fill-mode: both;
         }
 
-        .stat-card.total .number { color: #3b82f6; }
-        .stat-card.running .number { color: #10b981; }
-        .stat-card.stopped .number { color: #ef4444; }
-
-        /* TABLE */
-        .table-section {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(10px);
-            padding: 20px;
-            border-radius: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+        .table-wrapper {
             overflow-x: auto;
-        }
-
-        .table-section h2 {
-            margin-bottom: 20px;
-            font-size: 18px;
         }
 
         table {
@@ -193,245 +519,373 @@
         }
 
         thead {
-            background: rgba(255, 255, 255, 0.05);
+            background: rgba(0, 240, 255, 0.05);
         }
 
         th {
-            padding: 12px 15px;
-            text-align: left;
-            color: rgba(255, 255, 255, 0.7);
-            font-weight: 600;
-            font-size: 12px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 11px;
+            font-weight: 500;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            letter-spacing: 2px;
+            color: var(--accent-cyan);
+            padding: 18px 20px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
         }
 
         td {
-            padding: 12px 15px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-            font-size: 14px;
+            padding: 16px 20px;
+            font-size: 13px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+            transition: background 0.2s ease;
         }
 
-        tr:hover {
-            background: rgba(255, 255, 255, 0.03);
+        tr:hover td {
+            background: rgba(0, 240, 255, 0.03);
         }
 
-        .status-badge {
-            display: inline-block;
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-size: 11px;
+        .vm-id {
+            font-family: 'Orbitron', sans-serif;
             font-weight: 600;
-            text-transform: uppercase;
+            color: var(--accent-cyan);
         }
 
-        .status-running {
-            background: rgba(16, 185, 129, 0.2);
-            color: #34d399;
-        }
-
-        .status-stopped {
-            background: rgba(239, 68, 68, 0.2);
-            color: #f87171;
+        .vm-name {
+            font-weight: 500;
         }
 
         .type-badge {
             display: inline-block;
-            padding: 3px 8px;
-            border-radius: 4px;
+            padding: 5px 12px;
             font-size: 10px;
             font-weight: 600;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            border: 1px solid;
         }
 
         .type-vm {
-            background: rgba(59, 130, 246, 0.2);
-            color: #60a5fa;
+            color: var(--accent-cyan);
+            border-color: var(--accent-cyan);
+            background: rgba(0, 240, 255, 0.1);
         }
 
         .type-lxc {
-            background: rgba(139, 92, 246, 0.2);
-            color: #a78bfa;
+            color: var(--accent-purple);
+            border-color: var(--accent-purple);
+            background: rgba(168, 85, 247, 0.1);
         }
 
-        /* Mini gauges in table */
-        .mini-gauge {
-            width: 60px;
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 14px;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .status-running {
+            color: var(--accent-green);
+            background: rgba(0, 255, 157, 0.1);
+            border: 1px solid rgba(0, 255, 157, 0.3);
+        }
+
+        .status-stopped {
+            color: var(--accent-red);
+            background: rgba(255, 51, 102, 0.1);
+            border: 1px solid rgba(255, 51, 102, 0.3);
+        }
+
+        .status-badge::before {
+            content: '';
+            width: 6px;
             height: 6px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 3px;
-            overflow: hidden;
-            display: inline-block;
-            vertical-align: middle;
-            margin-right: 8px;
-        }
-
-        .mini-gauge-fill {
-            height: 100%;
-            border-radius: 3px;
-        }
-
-        .mini-gauge-fill.low { background: #10b981; }
-        .mini-gauge-fill.medium { background: #f59e0b; }
-        .mini-gauge-fill.high { background: #ef4444; }
-
-        .resource-cell {
-            white-space: nowrap;
-        }
-
-        /* LOADING */
-        .loading {
-            text-align: center;
-            padding: 40px;
-            color: rgba(255, 255, 255, 0.7);
-        }
-
-        .spinner {
-            border: 3px solid rgba(255, 255, 255, 0.1);
-            border-top: 3px solid #3b82f6;
             border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 20px;
+            background: currentColor;
         }
 
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+        /* Mini Progress Bars */
+        .resource-cell {
+            display: flex;
+            align-items: center;
+            gap: 12px;
         }
 
-        /* REFRESH BUTTON */
-        .refresh-btn {
-            background: rgba(59, 130, 246, 0.3);
-            color: white;
-            border: 1px solid rgba(59, 130, 246, 0.5);
-            padding: 8px 16px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 13px;
-            font-weight: 500;
-            transition: all 0.3s ease;
+        .mini-progress {
+            width: 80px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            position: relative;
+            overflow: hidden;
         }
 
-        .refresh-btn:hover {
-            background: rgba(59, 130, 246, 0.5);
+        .mini-progress-fill {
+            height: 100%;
+            transition: width 0.5s ease;
         }
 
-        /* RESPONSIVE */
-        @media (max-width: 768px) {
-            header {
-                flex-direction: column;
-                gap: 15px;
-                text-align: center;
-            }
+        .mini-progress-fill.low { background: var(--accent-green); }
+        .mini-progress-fill.medium { background: var(--accent-orange); }
+        .mini-progress-fill.high { background: var(--accent-red); }
 
-            .stats {
-                grid-template-columns: repeat(3, 1fr);
-            }
-
-            .stat-card .number {
-                font-size: 24px;
-            }
-
-            table {
-                font-size: 12px;
-            }
-
-            th, td {
-                padding: 8px 10px;
-            }
-        }
-
-        .error {
-            background: rgba(239, 68, 68, 0.2);
-            color: #f87171;
-            padding: 15px;
-            border-radius: 6px;
-            margin: 20px 0;
-            border: 1px solid rgba(239, 68, 68, 0.3);
+        .resource-text {
+            font-size: 12px;
+            color: var(--text-secondary);
+            min-width: 90px;
         }
 
         .uptime-cell {
-            color: rgba(255, 255, 255, 0.6);
+            color: var(--text-secondary);
             font-size: 12px;
+        }
+
+        .node-cell {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 11px;
+            letter-spacing: 1px;
+            color: var(--text-secondary);
+        }
+
+        /* Loading State */
+        .loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 60px 20px;
+            color: var(--text-secondary);
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 2px solid var(--border-color);
+            border-top-color: var(--accent-cyan);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            font-size: 12px;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            animation: loadingPulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes loadingPulse {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+
+        /* Error State */
+        .error {
+            background: rgba(255, 51, 102, 0.1);
+            border: 1px solid rgba(255, 51, 102, 0.3);
+            padding: 25px;
+            text-align: center;
+        }
+
+        .error strong {
+            color: var(--accent-red);
+            display: block;
+            margin-bottom: 10px;
+            font-family: 'Orbitron', sans-serif;
+            letter-spacing: 2px;
+        }
+
+        .error-details {
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            header {
+                flex-direction: column;
+                gap: 20px;
+                text-align: center;
+            }
+
+            .header-right {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .logo h1 {
+                font-size: 20px;
+            }
+
+            .gauges-row {
+                grid-template-columns: 1fr;
+                gap: 30px;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .stat-value {
+                font-size: 36px;
+            }
+
+            th, td {
+                padding: 12px 15px;
+            }
+        }
+
+        /* SVG Gradients */
+        .svg-defs {
+            position: absolute;
+            width: 0;
+            height: 0;
         }
     </style>
 </head>
 <body>
+    <!-- SVG Gradient Definitions -->
+    <svg class="svg-defs">
+        <defs>
+            <linearGradient id="cpuGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#00f0ff" />
+                <stop offset="100%" stop-color="#a855f7" />
+            </linearGradient>
+            <linearGradient id="ramGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#00ff9d" />
+                <stop offset="100%" stop-color="#00f0ff" />
+            </linearGradient>
+            <linearGradient id="diskGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#ff9500" />
+                <stop offset="100%" stop-color="#ff3366" />
+            </linearGradient>
+        </defs>
+    </svg>
+
+    <!-- Background Effects -->
+    <div class="grid-bg"></div>
+    <div class="scanlines"></div>
+
     <div class="container">
+        <!-- Header -->
         <header>
-            <h1>
-                <span>🖥️</span>
-                Supervision Proxmox
-            </h1>
-            <div>
-                <button class="refresh-btn" onclick="loadData()">🔄 Rafraîchir</button>
-                <div class="last-update">Dernière MAJ: <span id="lastUpdate">-</span></div>
+            <div class="logo">
+                <div class="logo-icon">P</div>
+                <div>
+                    <h1>PROXMOX</h1>
+                    <div class="subtitle">Control Center v2.0</div>
+                </div>
+            </div>
+            <div class="header-right">
+                <div class="status-indicator">
+                    <span class="status-dot"></span>
+                    <span class="status-text">System Online</span>
+                </div>
+                <div>
+                    <button class="refresh-btn" onclick="loadData()">Refresh</button>
+                    <div class="last-update">Last Update: <span id="lastUpdate">--:--:--</span></div>
+                </div>
             </div>
         </header>
 
-        <!-- Node Status -->
-        <div class="node-section">
-            <h2>📊 État du Serveur</h2>
-            <div class="node-grid" id="nodeGrid">
-                <div class="loading">
-                    <div class="spinner"></div>
-                    <p>Chargement...</p>
+        <!-- Main Content Grid -->
+        <div class="main-grid">
+            <!-- Node Status Panel -->
+            <div class="panel">
+                <div class="panel-header">
+                    <div class="panel-title">Server Status</div>
+                </div>
+                <div class="panel-body">
+                    <div class="node-grid" id="nodeGrid">
+                        <div class="loading">
+                            <div class="spinner"></div>
+                            <div class="loading-text">Connecting to Proxmox...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats Panel -->
+            <div class="panel">
+                <div class="panel-header">
+                    <div class="panel-title">Fleet Overview</div>
+                </div>
+                <div class="panel-body">
+                    <div class="stats-grid">
+                        <div class="stat-card total">
+                            <div class="stat-icon">&#9633;</div>
+                            <div class="stat-value" id="totalVms">-</div>
+                            <div class="stat-label">Total</div>
+                        </div>
+                        <div class="stat-card running">
+                            <div class="stat-icon">&#9654;</div>
+                            <div class="stat-value" id="runningVms">-</div>
+                            <div class="stat-label">Running</div>
+                        </div>
+                        <div class="stat-card stopped">
+                            <div class="stat-icon">&#9724;</div>
+                            <div class="stat-value" id="stoppedVms">-</div>
+                            <div class="stat-label">Stopped</div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- Stats Cards -->
-        <div class="stats">
-            <div class="stat-card total">
-                <h3>VMs Totales</h3>
-                <div class="number" id="totalVms">-</div>
+        <!-- VMs Table Panel -->
+        <div class="panel table-panel">
+            <div class="panel-header">
+                <div class="panel-title">Virtual Machines & Containers</div>
             </div>
-            <div class="stat-card running">
-                <h3>En Cours</h3>
-                <div class="number" id="runningVms">-</div>
+            <div class="panel-body">
+                <div id="loadingSpinner" class="loading">
+                    <div class="spinner"></div>
+                    <div class="loading-text">Loading Fleet Data...</div>
+                </div>
+                <div id="tableContainer" class="table-wrapper" style="display: none;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>Type</th>
+                                <th>Status</th>
+                                <th>CPU</th>
+                                <th>Memory</th>
+                                <th>Uptime</th>
+                                <th>Node</th>
+                            </tr>
+                        </thead>
+                        <tbody id="vmTable"></tbody>
+                    </table>
+                </div>
+                <div id="errorContainer" style="display: none;"></div>
             </div>
-            <div class="stat-card stopped">
-                <h3>Arrêtées</h3>
-                <div class="number" id="stoppedVms">-</div>
-            </div>
-        </div>
-
-        <!-- VMs Table -->
-        <div class="table-section">
-            <h2>🖥️ Machines Virtuelles & Containers</h2>
-            <div id="loadingSpinner" class="loading">
-                <div class="spinner"></div>
-                <p>Chargement des données...</p>
-            </div>
-            <div id="tableContainer" style="display: none;">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Nom</th>
-                            <th>Type</th>
-                            <th>Statut</th>
-                            <th>CPU</th>
-                            <th>RAM</th>
-                            <th>Uptime</th>
-                            <th>Nœud</th>
-                        </tr>
-                    </thead>
-                    <tbody id="vmTable">
-                    </tbody>
-                </table>
-            </div>
-            <div id="errorContainer" style="display: none;"></div>
         </div>
     </div>
 
     <script>
-        // Auto-refresh toutes les 5 secondes
+        // Auto-refresh every 5 seconds
         setInterval(loadData, 5000);
 
-        // Charger les données au démarrage
+        // Load data on startup
         loadData();
 
         function getGaugeColor(percent) {
@@ -448,8 +902,23 @@
             return (bytes / Math.pow(k, i)).toFixed(1) + ' ' + sizes[i];
         }
 
+        function createCircularGauge(percent, type) {
+            const radius = 52;
+            const circumference = 2 * Math.PI * radius;
+            const offset = circumference - (percent / 100) * circumference;
+
+            return `
+                <svg class="circular-gauge" viewBox="0 0 120 120">
+                    <circle class="gauge-bg" cx="60" cy="60" r="${radius}"/>
+                    <circle class="gauge-progress ${type}" cx="60" cy="60" r="${radius}"
+                        stroke-dasharray="${circumference}"
+                        stroke-dashoffset="${offset}"/>
+                </svg>
+            `;
+        }
+
         function loadData() {
-            // Charger le statut (inclut les nodes)
+            // Load status (includes nodes)
             fetch('/api/status')
                 .then(r => r.json())
                 .then(data => {
@@ -458,25 +927,25 @@
                     document.getElementById('stoppedVms').textContent = data.stopped;
                     document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString('fr-FR');
 
-                    // Afficher les nodes
+                    // Render nodes
                     if (data.nodes && data.nodes.length > 0) {
                         renderNodes(data.nodes);
                     }
                 })
-                .catch(err => console.error('Erreur statut:', err));
+                .catch(err => console.error('Status error:', err));
 
-            // Charger les VMs
+            // Load VMs
             fetch('/api/vms')
                 .then(r => r.json())
                 .then(vms => {
                     if (!Array.isArray(vms)) {
-                        throw new Error('Format invalide');
+                        throw new Error('Invalid format');
                     }
 
                     const tbody = document.getElementById('vmTable');
                     tbody.innerHTML = '';
 
-                    // Trier par status (running first) puis par ID
+                    // Sort by status (running first) then by ID
                     vms.sort((a, b) => {
                         if (a.status === 'running' && b.status !== 'running') return -1;
                         if (a.status !== 'running' && b.status === 'running') return 1;
@@ -485,7 +954,7 @@
 
                     vms.forEach(vm => {
                         const statusClass = vm.status === 'running' ? 'status-running' : 'status-stopped';
-                        const statusText = vm.status === 'running' ? '✓ Running' : '✗ Stopped';
+                        const statusText = vm.status === 'running' ? 'Running' : 'Stopped';
                         const typeClass = vm.type === 'VM' ? 'type-vm' : 'type-lxc';
 
                         const cpuColor = getGaugeColor(vm.cpu_usage || 0);
@@ -493,24 +962,28 @@
 
                         const row = `
                             <tr>
-                                <td><strong>${vm.id}</strong></td>
-                                <td>${vm.name}</td>
+                                <td class="vm-id">${vm.id}</td>
+                                <td class="vm-name">${vm.name}</td>
                                 <td><span class="type-badge ${typeClass}">${vm.type}</span></td>
                                 <td><span class="status-badge ${statusClass}">${statusText}</span></td>
-                                <td class="resource-cell">
-                                    <div class="mini-gauge">
-                                        <div class="mini-gauge-fill ${cpuColor}" style="width: ${vm.cpu_usage || 0}%"></div>
+                                <td>
+                                    <div class="resource-cell">
+                                        <div class="mini-progress">
+                                            <div class="mini-progress-fill ${cpuColor}" style="width: ${vm.cpu_usage || 0}%"></div>
+                                        </div>
+                                        <span class="resource-text">${(vm.cpu_usage || 0).toFixed(0)}% / ${vm.cpu_cores || 1}c</span>
                                     </div>
-                                    ${(vm.cpu_usage || 0).toFixed(0)}% (${vm.cpu_cores || 1} cores)
                                 </td>
-                                <td class="resource-cell">
-                                    <div class="mini-gauge">
-                                        <div class="mini-gauge-fill ${ramColor}" style="width: ${vm.mem_percent || 0}%"></div>
+                                <td>
+                                    <div class="resource-cell">
+                                        <div class="mini-progress">
+                                            <div class="mini-progress-fill ${ramColor}" style="width: ${vm.mem_percent || 0}%"></div>
+                                        </div>
+                                        <span class="resource-text">${(vm.mem_percent || 0).toFixed(0)}% / ${formatBytes(vm.mem_max)}</span>
                                     </div>
-                                    ${(vm.mem_percent || 0).toFixed(0)}% (${formatBytes(vm.mem_max)})
                                 </td>
                                 <td class="uptime-cell">${vm.status === 'running' ? (vm.uptime_formatted || '-') : '-'}</td>
-                                <td>${vm.node || 'N/A'}</td>
+                                <td class="node-cell">${vm.node || 'N/A'}</td>
                             </tr>
                         `;
                         tbody.innerHTML += row;
@@ -521,13 +994,13 @@
                     document.getElementById('errorContainer').style.display = 'none';
                 })
                 .catch(err => {
-                    console.error('Erreur:', err);
+                    console.error('Error:', err);
                     document.getElementById('loadingSpinner').style.display = 'none';
                     document.getElementById('tableContainer').style.display = 'none';
                     document.getElementById('errorContainer').innerHTML = `
                         <div class="error">
-                            <strong>Erreur de connexion à Proxmox</strong><br>
-                            Vérifiez que les credentials API sont corrects.
+                            <strong>CONNECTION ERROR</strong>
+                            <div class="error-details">Unable to connect to Proxmox API. Please verify your credentials.</div>
                         </div>
                     `;
                     document.getElementById('errorContainer').style.display = 'block';
@@ -542,43 +1015,42 @@
                 const card = document.createElement('div');
                 card.className = 'node-card';
                 card.innerHTML = `
-                    <h3>
-                        <span class="status-dot ${node.status === 'online' ? '' : 'offline'}"></span>
-                        ${node.name}
-                    </h3>
-
-                    <div class="gauge-container">
-                        <div class="gauge-label">
-                            <span>CPU</span>
-                            <span>${node.cpu_usage}% (${node.cpu_cores} cores)</span>
+                    <div class="node-header">
+                        <div class="node-name">
+                            <span class="node-status ${node.status === 'online' ? '' : 'offline'}"></span>
+                            ${node.name.toUpperCase()}
                         </div>
-                        <div class="gauge-bar">
-                            <div class="gauge-fill cpu" style="width: ${node.cpu_usage}%"></div>
-                        </div>
+                        <div class="node-uptime">Uptime: ${node.uptime_formatted}</div>
                     </div>
 
-                    <div class="gauge-container">
-                        <div class="gauge-label">
-                            <span>RAM</span>
-                            <span>${node.mem_percent}% (${formatBytes(node.mem_used)} / ${formatBytes(node.mem_total)})</span>
+                    <div class="gauges-row">
+                        <div class="gauge-item">
+                            ${createCircularGauge(node.cpu_usage, 'cpu')}
+                            <div class="gauge-center">
+                                <div class="gauge-value">${node.cpu_usage}</div>
+                                <div class="gauge-unit">%</div>
+                            </div>
+                            <div class="gauge-label">CPU</div>
+                            <div class="gauge-detail">${node.cpu_cores} Cores</div>
                         </div>
-                        <div class="gauge-bar">
-                            <div class="gauge-fill ram" style="width: ${node.mem_percent}%"></div>
+                        <div class="gauge-item">
+                            ${createCircularGauge(node.mem_percent, 'ram')}
+                            <div class="gauge-center">
+                                <div class="gauge-value">${node.mem_percent}</div>
+                                <div class="gauge-unit">%</div>
+                            </div>
+                            <div class="gauge-label">Memory</div>
+                            <div class="gauge-detail">${formatBytes(node.mem_used)} / ${formatBytes(node.mem_total)}</div>
                         </div>
-                    </div>
-
-                    <div class="gauge-container">
-                        <div class="gauge-label">
-                            <span>Disque</span>
-                            <span>${node.disk_percent}% (${formatBytes(node.disk_used)} / ${formatBytes(node.disk_total)})</span>
+                        <div class="gauge-item">
+                            ${createCircularGauge(node.disk_percent, 'disk')}
+                            <div class="gauge-center">
+                                <div class="gauge-value">${node.disk_percent}</div>
+                                <div class="gauge-unit">%</div>
+                            </div>
+                            <div class="gauge-label">Storage</div>
+                            <div class="gauge-detail">${formatBytes(node.disk_used)} / ${formatBytes(node.disk_total)}</div>
                         </div>
-                        <div class="gauge-bar">
-                            <div class="gauge-fill disk" style="width: ${node.disk_percent}%"></div>
-                        </div>
-                    </div>
-
-                    <div class="node-info">
-                        ⏱️ Uptime: ${node.uptime_formatted}
                     </div>
                 `;
                 grid.appendChild(card);
