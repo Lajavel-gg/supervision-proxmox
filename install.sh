@@ -43,19 +43,20 @@ else
     echo "✅ User Proxmox existe déjà"
 fi
 
-# Donner les permissions
+# Donner les permissions (PVEAuditor permet de LIRE les VMs/containers)
 echo "🔑 Attribution des permissions..."
-pveum acl modify / --roles PVEVMUser --users $PROXMOX_API_USER 2>/dev/null || true
+pveum acl modify / --roles PVEAuditor --users $PROXMOX_API_USER 2>/dev/null || true
 
 # Créer le token API avec un nom unique
 TOKEN_NAME="supervision-$(date +%s)"
 echo "🔑 Création du token API: $TOKEN_NAME"
 
 # Extraire le token correctement (c'est un UUID au format xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
-API_TOKEN_VALUE=$(pveum user token add $PROXMOX_API_USER $TOKEN_NAME 2>/dev/null | grep -oP '[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}')
+API_TOKEN_VALUE=$(pveum user token add $PROXMOX_API_USER $TOKEN_NAME --privsep 0 2>/dev/null | grep -oP '[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}')
 
 if [ -z "$API_TOKEN_VALUE" ]; then
     echo "⚠️  Impossible de créer le token automatiquement"
+    echo "   Tu devras le créer manuellement dans l'interface Proxmox"
     API_TOKEN_VALUE="TOKEN_NOT_CREATED"
 fi
 
@@ -180,29 +181,36 @@ PROXMOX_API_USER=\"${PROXMOX_API_USER}\"
 PROXMOX_API_TOKEN=\"${API_TOKEN_VALUE}\"
 ENV_FILE"
 
-# Créer un vrai rc.local qui source les variables ET lance le script
+# Créer un vrai rc.local qui source les variables ET lance le script EN ARRIÈRE-PLAN
 pct exec $VMID -- sh -c 'cat > /etc/rc.local << "RCLOCAL_FILE"
 #!/bin/sh
 # Source les variables d environnement
 [ -f /etc/supervision.env ] && . /etc/supervision.env
-# Lancer le script
-/usr/local/bin/start-supervision.sh
+# Lancer le script EN ARRIÈRE-PLAN (& à la fin)
+nohup /usr/local/bin/start-supervision.sh &
 exit 0
 RCLOCAL_FILE'
 
 pct exec $VMID -- chmod +x /etc/rc.local
 
-# Lancer l'app immédiatement pour tester
-pct exec $VMID -- sh -c "PROXMOX_HOST='${PROXMOX_HOST}' PROXMOX_API_USER='${PROXMOX_API_USER}' PROXMOX_API_TOKEN='${API_TOKEN_VALUE}' /usr/local/bin/start-supervision.sh"
+# Lancer l'app immédiatement en ARRIÈRE-PLAN (& à la fin)
+echo "🚀 Lancement de l'application..."
+pct exec $VMID -- sh -c "PROXMOX_HOST='${PROXMOX_HOST}' PROXMOX_API_USER='${PROXMOX_API_USER}' PROXMOX_API_TOKEN='${API_TOKEN_VALUE}' nohup /usr/local/bin/start-supervision.sh &"
 
-sleep 5
+# Attendre que l'app démarre
+sleep 3
+
+# Vérifier que l'app tourne
+if pct exec $VMID -- pgrep -f "python3 /app/app.py" > /dev/null; then
+    echo "✅ Application démarrée avec succès!"
+else
+    echo "⚠️  L'application ne semble pas avoir démarré. Vérifiez les logs:"
+    echo "   pct exec $VMID -- cat /var/log/supervision.log"
+fi
 
 echo ""
 echo "✅ Installation terminée!"
 echo ""
-
-# Attendre un peu que tout soit stable
-sleep 2
 
 # Récupérer l'IP du container
 IP_CONTAINER=$(pct config $VMID | grep "^net0" | grep -oP '(?<=ip=)[^,]*' | cut -d'/' -f1)
