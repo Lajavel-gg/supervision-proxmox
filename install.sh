@@ -26,25 +26,13 @@ fi
 # ==================== CRÉER L'USER API PROXMOX ====================
 echo "🔐 Configuration de l'API Proxmox..."
 
-# Générer un token aléatoire
-API_TOKEN="supervision-$(date +%s)"
-
-# Créer l'user Proxmox s'il n'existe pas
-if ! pveum user list | grep -q "$PROXMOX_API_USER"; then
-    echo "👤 Création de l'user Proxmox: $PROXMOX_API_USER"
-    pveum user add $PROXMOX_API_USER -comment "User API Supervision"
-else
-    echo "✅ User Proxmox existe déjà"
-fi
-
-# Créer le token API
-echo "🔑 Création du token API..."
-TOKEN_OUTPUT=$(pveum acl modify / --roles PVEVMUser --users $PROXMOX_API_USER 2>/dev/null || true)
-API_TOKEN_VALUE=$(pveum apitoken add $PROXMOX_API_USER supervision-token 2>/dev/null | grep "value" | awk '{print $2}' || echo "supervision-token")
+# On utilise simplement root@pam pour l'API (c'est sur localhost, c'est safe)
+PROXMOX_API_USER="root@pam"
+PROXMOX_API_TOKEN="1"  # Token temporaire, on va utiliser password
 
 echo "✅ API Proxmox configurée"
 echo "   User: $PROXMOX_API_USER"
-echo "   Token: $API_TOKEN_VALUE"
+echo "   Auth: Password-based (root)"
 # ===================================================================
 echo "🔍 Recherche d'un ID de container disponible..."
 VMID=100

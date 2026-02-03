@@ -11,11 +11,12 @@ import json
 import requests
 from datetime import datetime
 from flask import Flask, render_template, jsonify
+from requests.auth import HTTPBasicAuth
 
 # Configuration Proxmox depuis les variables d'environnement
 PROXMOX_HOST = os.getenv("PROXMOX_HOST", "localhost")
 PROXMOX_API_USER = os.getenv("PROXMOX_API_USER", "root@pam")
-PROXMOX_API_TOKEN = os.getenv("PROXMOX_API_TOKEN", "")
+PROXMOX_API_PASSWORD = os.getenv("PROXMOX_API_PASSWORD", "")
 
 # URL de l'API Proxmox
 PROXMOX_API_URL = f"https://{PROXMOX_HOST}:8006/api2/json"
@@ -25,15 +26,49 @@ app = Flask(__name__)
 # Désactiver les avertissements SSL (Proxmox utilise un certificat auto-signé)
 requests.packages.urllib3.disable_warnings()
 
+def get_proxmox_ticket():
+    """Obtenir un ticket d'authentification Proxmox"""
+    try:
+        auth_url = f"{PROXMOX_API_URL}/access/ticket"
+        
+        response = requests.post(
+            auth_url,
+            data={
+                'username': PROXMOX_API_USER,
+                'password': PROXMOX_API_PASSWORD,
+                'realm': 'pam'
+            },
+            verify=False,
+            timeout=5
+        )
+        
+        if response.status_code == 200:
+            data = response.json()
+            return {
+                'ticket': data.get('data', {}).get('ticket'),
+                'csrftoken': data.get('data', {}).get('CSRFPreventionToken')
+            }
+        return None
+        
+    except Exception as e:
+        print(f"Erreur auth Proxmox: {e}")
+        return None
+
 def get_proxmox_vms():
     """Récupérer la liste des VMs depuis l'API Proxmox"""
     try:
-        headers = {
-            "Authorization": f"PVEAPIToken={PROXMOX_API_USER}={PROXMOX_API_TOKEN}"
-        }
+        # Obtenir un ticket d'auth
+        auth = get_proxmox_ticket()
+        if not auth or not auth.get('ticket'):
+            print("Impossible de s'authentifier à Proxmox")
+            return []
+        
+        cookies = {'PVEAuthCookie': auth['ticket']}
+        headers = {'CSRFPreventionToken': auth['csrftoken']}
         
         response = requests.get(
             f"{PROXMOX_API_URL}/nodes",
+            cookies=cookies,
             headers=headers,
             verify=False,
             timeout=5
@@ -51,46 +86,54 @@ def get_proxmox_vms():
             node_name = node["node"]
             
             # VMs QEMU
-            qm_response = requests.get(
-                f"{PROXMOX_API_URL}/nodes/{node_name}/qemu",
-                headers=headers,
-                verify=False,
-                timeout=5
-            )
-            
-            if qm_response.status_code == 200:
-                for vm in qm_response.json().get("data", []):
-                    vms.append({
-                        'id': vm['vmid'],
-                        'name': vm['name'],
-                        'type': 'VM',
-                        'status': vm['status'],
-                        'node': node_name,
-                        'memory': vm.get('mem', 0),
-                        'maxmem': vm.get('maxmem', 0),
-                        'cpu': vm.get('cpus', 0)
-                    })
+            try:
+                qm_response = requests.get(
+                    f"{PROXMOX_API_URL}/nodes/{node_name}/qemu",
+                    cookies=cookies,
+                    headers=headers,
+                    verify=False,
+                    timeout=5
+                )
+                
+                if qm_response.status_code == 200:
+                    for vm in qm_response.json().get("data", []):
+                        vms.append({
+                            'id': vm['vmid'],
+                            'name': vm['name'],
+                            'type': 'VM',
+                            'status': vm['status'],
+                            'node': node_name,
+                            'memory': vm.get('mem', 0),
+                            'maxmem': vm.get('maxmem', 0),
+                            'cpu': vm.get('cpus', 0)
+                        })
+            except:
+                pass
             
             # Containers LXC
-            lxc_response = requests.get(
-                f"{PROXMOX_API_URL}/nodes/{node_name}/lxc",
-                headers=headers,
-                verify=False,
-                timeout=5
-            )
-            
-            if lxc_response.status_code == 200:
-                for container in lxc_response.json().get("data", []):
-                    vms.append({
-                        'id': container['vmid'],
-                        'name': container['hostname'],
-                        'type': 'LXC',
-                        'status': container['status'],
-                        'node': node_name,
-                        'memory': container.get('mem', 0),
-                        'maxmem': container.get('maxmem', 0),
-                        'cpu': container.get('cpus', 0)
-                    })
+            try:
+                lxc_response = requests.get(
+                    f"{PROXMOX_API_URL}/nodes/{node_name}/lxc",
+                    cookies=cookies,
+                    headers=headers,
+                    verify=False,
+                    timeout=5
+                )
+                
+                if lxc_response.status_code == 200:
+                    for container in lxc_response.json().get("data", []):
+                        vms.append({
+                            'id': container['vmid'],
+                            'name': container['hostname'],
+                            'type': 'LXC',
+                            'status': container['status'],
+                            'node': node_name,
+                            'memory': container.get('mem', 0),
+                            'maxmem': container.get('maxmem', 0),
+                            'cpu': container.get('cpus', 0)
+                        })
+            except:
+                pass
         
         return vms
         
