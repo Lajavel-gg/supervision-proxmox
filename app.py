@@ -2,80 +2,45 @@
 """
 Supervision Proxmox - API et Dashboard
 Alpine LXC compatible
-Connexion à l'API Proxmox pour lire les VMs en temps réel
+Connexion à l'API Proxmox avec Token API
 """
 
 import os
-import subprocess
-import json
 import requests
 from datetime import datetime
 from flask import Flask, render_template, jsonify
-from requests.auth import HTTPBasicAuth
 
 # Configuration Proxmox depuis les variables d'environnement
 PROXMOX_HOST = os.getenv("PROXMOX_HOST", "localhost")
 PROXMOX_API_USER = os.getenv("PROXMOX_API_USER", "root@pam")
-PROXMOX_API_PASSWORD = os.getenv("PROXMOX_API_PASSWORD", "")
+PROXMOX_API_TOKEN = os.getenv("PROXMOX_API_TOKEN", "")
 
 # URL de l'API Proxmox
 PROXMOX_API_URL = f"https://{PROXMOX_HOST}:8006/api2/json"
 
 app = Flask(__name__)
 
-# Désactiver les avertissements SSL (Proxmox utilise un certificat auto-signé)
+# Désactiver les avertissements SSL
 requests.packages.urllib3.disable_warnings()
 
-def get_proxmox_ticket():
-    """Obtenir un ticket d'authentification Proxmox"""
-    try:
-        auth_url = f"{PROXMOX_API_URL}/access/ticket"
-        
-        response = requests.post(
-            auth_url,
-            data={
-                'username': PROXMOX_API_USER,
-                'password': PROXMOX_API_PASSWORD,
-                'realm': 'pam'
-            },
-            verify=False,
-            timeout=5
-        )
-        
-        if response.status_code == 200:
-            data = response.json()
-            return {
-                'ticket': data.get('data', {}).get('ticket'),
-                'csrftoken': data.get('data', {}).get('CSRFPreventionToken')
-            }
-        return None
-        
-    except Exception as e:
-        print(f"Erreur auth Proxmox: {e}")
-        return None
-
 def get_proxmox_vms():
-    """Récupérer la liste des VMs depuis l'API Proxmox"""
+    """Récupérer la liste des VMs depuis l'API Proxmox avec le token"""
     try:
-        # Obtenir un ticket d'auth
-        auth = get_proxmox_ticket()
-        if not auth or not auth.get('ticket'):
-            print("Impossible de s'authentifier à Proxmox")
-            return []
+        # Headers avec le token API
+        headers = {
+            "Authorization": f"PVEAPIToken={PROXMOX_API_USER}={PROXMOX_API_TOKEN}"
+        }
         
-        cookies = {'PVEAuthCookie': auth['ticket']}
-        headers = {'CSRFPreventionToken': auth['csrftoken']}
-        
+        # Récupérer les nœuds
         response = requests.get(
             f"{PROXMOX_API_URL}/nodes",
-            cookies=cookies,
             headers=headers,
             verify=False,
             timeout=5
         )
         
         if response.status_code != 200:
-            print(f"Erreur API Proxmox: {response.status_code}")
+            print(f"Erreur API Proxmox (nodes): {response.status_code}")
             return []
         
         nodes = response.json().get("data", [])
@@ -89,7 +54,6 @@ def get_proxmox_vms():
             try:
                 qm_response = requests.get(
                     f"{PROXMOX_API_URL}/nodes/{node_name}/qemu",
-                    cookies=cookies,
                     headers=headers,
                     verify=False,
                     timeout=5
@@ -107,14 +71,13 @@ def get_proxmox_vms():
                             'maxmem': vm.get('maxmem', 0),
                             'cpu': vm.get('cpus', 0)
                         })
-            except:
-                pass
+            except Exception as e:
+                print(f"Erreur récupération VMs QEMU: {e}")
             
             # Containers LXC
             try:
                 lxc_response = requests.get(
                     f"{PROXMOX_API_URL}/nodes/{node_name}/lxc",
-                    cookies=cookies,
                     headers=headers,
                     verify=False,
                     timeout=5
@@ -132,8 +95,8 @@ def get_proxmox_vms():
                             'maxmem': container.get('maxmem', 0),
                             'cpu': container.get('cpus', 0)
                         })
-            except:
-                pass
+            except Exception as e:
+                print(f"Erreur récupération containers LXC: {e}")
         
         return vms
         
@@ -165,7 +128,7 @@ def api_status():
             'proxmox_host': PROXMOX_HOST
         })
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': str(e), 'total_vms': 0, 'running': 0, 'stopped': 0}), 500
 
 @app.route('/api/health')
 def api_health():
@@ -173,6 +136,6 @@ def api_health():
     return jsonify({'status': 'ok', 'timestamp': datetime.now().isoformat()})
 
 if __name__ == '__main__':
-    print("🚀 Supervision Proxmox démarrée sur http://0.0.0.0:5000")
+    print(f"🚀 Supervision Proxmox démarrée sur http://0.0.0.0:5000")
     print(f"   Connecté à Proxmox: {PROXMOX_HOST}")
     app.run(host='0.0.0.0', port=5000, debug=False, threaded=True)
