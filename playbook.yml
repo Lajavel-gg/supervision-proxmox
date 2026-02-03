@@ -23,11 +23,17 @@
           - openrc
         state: present
 
-    - name: Cloner le dépôt Git
-      git:
-        repo: https://github.com/Lajavel-gg/supervision-proxmox
-        dest: "{{ app_dir }}"
-        force: yes
+    - name: Créer le dossier de l'application
+      file:
+        path: "{{ app_dir }}"
+        tate: directory
+
+    - name: Copier les fichiers de l'application
+      copy:
+        src: files/
+        dest: "{{ app_dir }}/"
+        mode: "0755"
+
 
     - name: Créer l'environnement virtuel Python
       command: python3 -m venv {{ venv_dir }}
