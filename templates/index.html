@@ -3,25 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PROXMOX // CONTROL CENTER</title>
+    <title>Proxmox Dashboard</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-primary: #0a0e14;
-            --bg-secondary: #0d1117;
-            --bg-card: rgba(13, 17, 23, 0.85);
-            --accent-cyan: #00f0ff;
-            --accent-green: #00ff9d;
-            --accent-orange: #ff9500;
-            --accent-red: #ff3366;
-            --accent-purple: #a855f7;
-            --text-primary: #e6edf3;
-            --text-secondary: #8b949e;
-            --border-color: rgba(0, 240, 255, 0.15);
-            --glow-cyan: 0 0 20px rgba(0, 240, 255, 0.3);
-            --glow-green: 0 0 20px rgba(0, 255, 157, 0.3);
+            --bg-base: #0f1419;
+            --bg-surface: #1a1f26;
+            --bg-elevated: #242b35;
+            --bg-hover: #2d3640;
+            --border: #2d3640;
+            --border-subtle: rgba(255, 255, 255, 0.06);
+            --text-primary: #f0f2f5;
+            --text-secondary: #8a919c;
+            --text-muted: #5c6370;
+            --accent-blue: #4c9aff;
+            --accent-green: #36b37e;
+            --accent-yellow: #ffab00;
+            --accent-red: #ff5630;
+            --accent-purple: #8777d9;
         }
 
         * {
@@ -31,386 +32,333 @@
         }
 
         body {
-            font-family: 'JetBrains Mono', monospace;
-            background: var(--bg-primary);
+            font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+            background: var(--bg-base);
             min-height: 100vh;
             color: var(--text-primary);
-            overflow-x: hidden;
+            line-height: 1.5;
         }
 
-        /* Animated Grid Background */
-        .grid-bg {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 0;
-            background-image:
-                linear-gradient(rgba(0, 240, 255, 0.03) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(0, 240, 255, 0.03) 1px, transparent 1px);
-            background-size: 50px 50px;
-            animation: gridMove 20s linear infinite;
-        }
-
-        @keyframes gridMove {
-            0% { background-position: 0 0; }
-            100% { background-position: 50px 50px; }
-        }
-
-        /* Scanline Effect */
-        .scanlines {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 1;
-            background: repeating-linear-gradient(
-                0deg,
-                transparent,
-                transparent 2px,
-                rgba(0, 0, 0, 0.1) 2px,
-                rgba(0, 0, 0, 0.1) 4px
-            );
-            opacity: 0.4;
-        }
-
-        .container {
-            position: relative;
-            z-index: 2;
-            max-width: 1800px;
-            margin: 0 auto;
-            padding: 30px;
+        .app {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
         }
 
         /* Header */
-        header {
+        .header {
+            background: var(--bg-surface);
+            border-bottom: 1px solid var(--border);
+            padding: 0 32px;
+            height: 64px;
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            padding: 25px 30px;
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            margin-bottom: 30px;
-            position: relative;
-            overflow: hidden;
-            animation: slideDown 0.6s ease-out;
-        }
-
-        @keyframes slideDown {
-            from { opacity: 0; transform: translateY(-30px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        header::before {
-            content: '';
-            position: absolute;
+            justify-content: space-between;
+            position: sticky;
             top: 0;
-            left: 0;
-            right: 0;
-            height: 2px;
-            background: linear-gradient(90deg, transparent, var(--accent-cyan), transparent);
+            z-index: 100;
         }
 
-        header::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: 1px;
-            background: linear-gradient(90deg, transparent, var(--accent-cyan) 50%, transparent);
-            opacity: 0.5;
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
         }
 
         .logo {
             display: flex;
             align-items: center;
-            gap: 20px;
+            gap: 12px;
         }
 
-        .logo-icon {
-            width: 50px;
-            height: 50px;
-            border: 2px solid var(--accent-cyan);
+        .logo-mark {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+            border-radius: 8px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 24px;
-            position: relative;
-            animation: pulse 2s ease-in-out infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { box-shadow: var(--glow-cyan); }
-            50% { box-shadow: 0 0 30px rgba(0, 240, 255, 0.5); }
-        }
-
-        .logo-icon::before {
-            content: '';
-            position: absolute;
-            width: 8px;
-            height: 8px;
-            background: var(--accent-cyan);
-            top: -4px;
-            right: -4px;
-        }
-
-        .logo h1 {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 28px;
             font-weight: 700;
-            letter-spacing: 4px;
-            background: linear-gradient(135deg, var(--text-primary), var(--accent-cyan));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            font-size: 16px;
+            color: white;
         }
 
-        .logo .subtitle {
-            font-size: 11px;
+        .logo-text {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .logo-text span {
             color: var(--text-secondary);
-            letter-spacing: 3px;
-            margin-top: 4px;
-            text-transform: uppercase;
+            font-weight: 500;
         }
 
         .header-right {
             display: flex;
             align-items: center;
-            gap: 25px;
-        }
-
-        .status-indicator {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 10px 20px;
-            background: rgba(0, 255, 157, 0.1);
-            border: 1px solid rgba(0, 255, 157, 0.3);
-        }
-
-        .status-dot {
-            width: 10px;
-            height: 10px;
-            background: var(--accent-green);
-            border-radius: 50%;
-            animation: blink 1.5s ease-in-out infinite;
-        }
-
-        @keyframes blink {
-            0%, 100% { opacity: 1; box-shadow: 0 0 10px var(--accent-green); }
-            50% { opacity: 0.5; box-shadow: none; }
-        }
-
-        .status-text {
-            font-size: 12px;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            color: var(--accent-green);
-        }
-
-        .refresh-btn {
-            background: transparent;
-            border: 1px solid var(--accent-cyan);
-            color: var(--accent-cyan);
-            padding: 12px 24px;
-            font-family: 'Orbitron', sans-serif;
-            font-size: 12px;
-            letter-spacing: 2px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-transform: uppercase;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .refresh-btn::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(0, 240, 255, 0.2), transparent);
-            transition: left 0.5s ease;
-        }
-
-        .refresh-btn:hover::before {
-            left: 100%;
-        }
-
-        .refresh-btn:hover {
-            background: rgba(0, 240, 255, 0.1);
-            box-shadow: var(--glow-cyan);
-        }
-
-        .last-update {
-            font-size: 11px;
-            color: var(--text-secondary);
-            text-align: right;
-        }
-
-        .last-update span {
-            color: var(--accent-cyan);
-            font-weight: 500;
-        }
-
-        /* Main Grid Layout */
-        .main-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 30px;
-            margin-bottom: 30px;
-        }
-
-        /* Section Panels */
-        .panel {
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            position: relative;
-            animation: fadeIn 0.8s ease-out;
-            animation-fill-mode: both;
-        }
-
-        .panel:nth-child(1) { animation-delay: 0.1s; }
-        .panel:nth-child(2) { animation-delay: 0.2s; }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .panel::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 3px;
-            background: linear-gradient(90deg, var(--accent-cyan), var(--accent-purple), var(--accent-cyan));
-        }
-
-        .panel-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 20px 25px;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        .panel-title {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 14px;
-            letter-spacing: 3px;
-            text-transform: uppercase;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .panel-title::before {
-            content: '';
-            width: 4px;
-            height: 20px;
-            background: var(--accent-cyan);
-        }
-
-        .panel-body {
-            padding: 25px;
-        }
-
-        /* Node Section */
-        .node-grid {
-            display: grid;
             gap: 20px;
         }
 
-        .node-card {
-            background: rgba(0, 240, 255, 0.03);
-            border: 1px solid var(--border-color);
-            padding: 25px;
-            position: relative;
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            background: rgba(54, 179, 126, 0.1);
+            border-radius: 6px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--accent-green);
+            border-radius: 50%;
+        }
+
+        .status-label {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--accent-green);
+        }
+
+        .last-sync {
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        .last-sync strong {
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            border: none;
+            font-family: inherit;
+        }
+
+        .btn-primary {
+            background: var(--accent-blue);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5aa3ff;
+        }
+
+        .btn-icon {
+            width: 16px;
+            height: 16px;
+        }
+
+        /* Main Content */
+        .main {
+            flex: 1;
+            padding: 24px 32px;
+            max-width: 1600px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        /* Stats Row */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px 24px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .stat-icon.total {
+            background: rgba(76, 154, 255, 0.15);
+            color: var(--accent-blue);
+        }
+
+        .stat-icon.running {
+            background: rgba(54, 179, 126, 0.15);
+            color: var(--accent-green);
+        }
+
+        .stat-icon.stopped {
+            background: rgba(255, 86, 48, 0.15);
+            color: var(--accent-red);
+        }
+
+        .stat-icon svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        .stat-content {
+            flex: 1;
+        }
+
+        .stat-label {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        .stat-card.total .stat-value { color: var(--accent-blue); }
+        .stat-card.running .stat-value { color: var(--accent-green); }
+        .stat-card.stopped .stat-value { color: var(--accent-red); }
+
+        /* Grid Layout */
+        .content-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        /* Cards */
+        .card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .card-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .card-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .card-body {
+            padding: 20px;
+        }
+
+        /* Node Card */
+        .node-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .node-item {
+            background: var(--bg-elevated);
+            border-radius: 10px;
+            padding: 20px;
         }
 
         .node-header {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            margin-bottom: 25px;
+            margin-bottom: 20px;
         }
 
-        .node-name {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 18px;
-            letter-spacing: 2px;
+        .node-info {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 10px;
         }
 
         .node-status {
-            width: 12px;
-            height: 12px;
-            background: var(--accent-green);
+            width: 10px;
+            height: 10px;
             border-radius: 50%;
-            box-shadow: 0 0 15px var(--accent-green);
+            background: var(--accent-green);
         }
 
         .node-status.offline {
             background: var(--accent-red);
-            box-shadow: 0 0 15px var(--accent-red);
+        }
+
+        .node-name {
+            font-size: 15px;
+            font-weight: 600;
         }
 
         .node-uptime {
             font-size: 12px;
-            color: var(--text-secondary);
-            padding: 6px 14px;
-            background: rgba(0, 240, 255, 0.1);
-            border: 1px solid var(--border-color);
+            color: var(--text-muted);
+            padding: 4px 10px;
+            background: var(--bg-surface);
+            border-radius: 4px;
         }
 
-        /* Circular Gauges */
-        .gauges-row {
+        /* Metrics Grid */
+        .metrics-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 20px;
+            gap: 16px;
         }
 
-        .gauge-item {
+        .metric-item {
             text-align: center;
         }
 
-        .circular-gauge {
+        .metric-gauge {
             position: relative;
-            width: 120px;
-            height: 120px;
-            margin: 0 auto 15px;
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 12px;
         }
 
         .gauge-bg {
             fill: none;
-            stroke: rgba(255, 255, 255, 0.05);
-            stroke-width: 8;
+            stroke: var(--border);
+            stroke-width: 6;
         }
 
-        .gauge-progress {
+        .gauge-fill {
             fill: none;
-            stroke-width: 8;
+            stroke-width: 6;
             stroke-linecap: round;
             transform: rotate(-90deg);
             transform-origin: 50% 50%;
-            transition: stroke-dashoffset 0.8s ease;
+            transition: stroke-dashoffset 0.5s ease;
         }
 
-        .gauge-progress.cpu { stroke: url(#cpuGradient); }
-        .gauge-progress.ram { stroke: url(#ramGradient); }
-        .gauge-progress.disk { stroke: url(#diskGradient); }
+        .gauge-fill.cpu { stroke: var(--accent-blue); }
+        .gauge-fill.ram { stroke: var(--accent-green); }
+        .gauge-fill.disk { stroke: var(--accent-yellow); }
 
-        .gauge-center {
+        .gauge-text {
             position: absolute;
             top: 50%;
             left: 50%;
@@ -419,93 +367,82 @@
         }
 
         .gauge-value {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 24px;
+            font-size: 18px;
             font-weight: 700;
             color: var(--text-primary);
         }
 
         .gauge-unit {
-            font-size: 10px;
-            color: var(--text-secondary);
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .gauge-label {
             font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .metric-label {
+            font-size: 12px;
+            font-weight: 600;
             color: var(--text-secondary);
             text-transform: uppercase;
-            letter-spacing: 2px;
+            letter-spacing: 0.5px;
         }
 
-        .gauge-detail {
-            font-size: 10px;
-            color: var(--accent-cyan);
-            margin-top: 4px;
+        .metric-detail {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 2px;
         }
 
-        /* Stats Section */
-        .stats-grid {
+        /* Summary Card */
+        .summary-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 20px;
+            gap: 12px;
         }
 
-        .stat-card {
-            background: linear-gradient(135deg, rgba(0, 240, 255, 0.05), transparent);
-            border: 1px solid var(--border-color);
-            padding: 30px 20px;
+        .summary-item {
+            background: var(--bg-elevated);
+            border-radius: 10px;
+            padding: 24px 16px;
             text-align: center;
-            position: relative;
-            transition: all 0.3s ease;
         }
 
-        .stat-card:hover {
-            border-color: var(--accent-cyan);
-            transform: translateY(-5px);
+        .summary-icon {
+            width: 40px;
+            height: 40px;
+            margin: 0 auto 12px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
-        .stat-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 60%;
-            height: 2px;
-            background: linear-gradient(90deg, transparent, var(--accent-cyan), transparent);
+        .summary-icon.total { background: rgba(76, 154, 255, 0.15); color: var(--accent-blue); }
+        .summary-icon.running { background: rgba(54, 179, 126, 0.15); color: var(--accent-green); }
+        .summary-icon.stopped { background: rgba(255, 86, 48, 0.15); color: var(--accent-red); }
+
+        .summary-icon svg {
+            width: 20px;
+            height: 20px;
         }
 
-        .stat-icon {
+        .summary-value {
             font-size: 28px;
-            margin-bottom: 15px;
-            opacity: 0.8;
-        }
-
-        .stat-value {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 48px;
             font-weight: 700;
-            line-height: 1;
-            margin-bottom: 10px;
+            margin-bottom: 4px;
         }
 
-        .stat-card.total .stat-value { color: var(--accent-cyan); }
-        .stat-card.running .stat-value { color: var(--accent-green); }
-        .stat-card.stopped .stat-value { color: var(--accent-red); }
+        .summary-item.total .summary-value { color: var(--accent-blue); }
+        .summary-item.running .summary-value { color: var(--accent-green); }
+        .summary-item.stopped .summary-value { color: var(--accent-red); }
 
-        .stat-label {
-            font-size: 11px;
-            color: var(--text-secondary);
-            text-transform: uppercase;
-            letter-spacing: 3px;
+        .summary-label {
+            font-size: 12px;
+            color: var(--text-muted);
+            font-weight: 500;
         }
 
-        /* Table Section */
-        .table-panel {
-            animation: fadeIn 0.8s ease-out 0.3s;
-            animation-fill-mode: both;
+        /* Table */
+        .table-card {
+            grid-column: 1 / -1;
         }
 
         .table-wrapper {
@@ -515,159 +452,135 @@
         table {
             width: 100%;
             border-collapse: collapse;
-            min-width: 900px;
-        }
-
-        thead {
-            background: rgba(0, 240, 255, 0.05);
+            min-width: 800px;
         }
 
         th {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 11px;
-            font-weight: 500;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            color: var(--accent-cyan);
-            padding: 18px 20px;
             text-align: left;
-            border-bottom: 1px solid var(--border-color);
+            padding: 12px 16px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            background: var(--bg-elevated);
+            border-bottom: 1px solid var(--border);
         }
 
         td {
-            padding: 16px 20px;
-            font-size: 13px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
-            transition: background 0.2s ease;
+            padding: 14px 16px;
+            font-size: 14px;
+            border-bottom: 1px solid var(--border-subtle);
         }
 
         tr:hover td {
-            background: rgba(0, 240, 255, 0.03);
+            background: var(--bg-hover);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
         }
 
         .vm-id {
-            font-family: 'Orbitron', sans-serif;
             font-weight: 600;
-            color: var(--accent-cyan);
+            color: var(--accent-blue);
+            font-variant-numeric: tabular-nums;
         }
 
         .vm-name {
             font-weight: 500;
         }
 
-        .type-badge {
-            display: inline-block;
-            padding: 5px 12px;
-            font-size: 10px;
-            font-weight: 600;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-            border: 1px solid;
-        }
-
-        .type-vm {
-            color: var(--accent-cyan);
-            border-color: var(--accent-cyan);
-            background: rgba(0, 240, 255, 0.1);
-        }
-
-        .type-lxc {
-            color: var(--accent-purple);
-            border-color: var(--accent-purple);
-            background: rgba(168, 85, 247, 0.1);
-        }
-
-        .status-badge {
+        .badge {
             display: inline-flex;
             align-items: center;
-            gap: 8px;
-            padding: 6px 14px;
+            padding: 4px 10px;
+            border-radius: 4px;
             font-size: 11px;
             font-weight: 600;
-            letter-spacing: 1px;
             text-transform: uppercase;
+            letter-spacing: 0.3px;
         }
 
-        .status-running {
+        .badge-vm {
+            background: rgba(76, 154, 255, 0.15);
+            color: var(--accent-blue);
+        }
+
+        .badge-lxc {
+            background: rgba(135, 119, 217, 0.15);
+            color: var(--accent-purple);
+        }
+
+        .badge-running {
+            background: rgba(54, 179, 126, 0.15);
             color: var(--accent-green);
-            background: rgba(0, 255, 157, 0.1);
-            border: 1px solid rgba(0, 255, 157, 0.3);
         }
 
-        .status-stopped {
+        .badge-stopped {
+            background: rgba(255, 86, 48, 0.15);
             color: var(--accent-red);
-            background: rgba(255, 51, 102, 0.1);
-            border: 1px solid rgba(255, 51, 102, 0.3);
         }
 
-        .status-badge::before {
-            content: '';
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            background: currentColor;
-        }
-
-        /* Mini Progress Bars */
-        .resource-cell {
+        /* Resource Bar */
+        .resource-bar {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 10px;
         }
 
-        .mini-progress {
-            width: 80px;
-            height: 4px;
-            background: rgba(255, 255, 255, 0.1);
-            position: relative;
+        .bar-track {
+            width: 60px;
+            height: 6px;
+            background: var(--border);
+            border-radius: 3px;
             overflow: hidden;
         }
 
-        .mini-progress-fill {
+        .bar-fill {
             height: 100%;
-            transition: width 0.5s ease;
+            border-radius: 3px;
+            transition: width 0.3s ease;
         }
 
-        .mini-progress-fill.low { background: var(--accent-green); }
-        .mini-progress-fill.medium { background: var(--accent-orange); }
-        .mini-progress-fill.high { background: var(--accent-red); }
+        .bar-fill.low { background: var(--accent-green); }
+        .bar-fill.medium { background: var(--accent-yellow); }
+        .bar-fill.high { background: var(--accent-red); }
 
-        .resource-text {
-            font-size: 12px;
+        .bar-text {
+            font-size: 13px;
             color: var(--text-secondary);
-            min-width: 90px;
+            min-width: 80px;
         }
 
-        .uptime-cell {
+        .uptime-text {
+            color: var(--text-muted);
+            font-size: 13px;
+        }
+
+        .node-text {
             color: var(--text-secondary);
-            font-size: 12px;
+            font-size: 13px;
         }
 
-        .node-cell {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 11px;
-            letter-spacing: 1px;
-            color: var(--text-secondary);
-        }
-
-        /* Loading State */
+        /* Loading */
         .loading {
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 60px 20px;
-            color: var(--text-secondary);
+            padding: 48px 20px;
+            color: var(--text-muted);
         }
 
         .spinner {
-            width: 50px;
-            height: 50px;
-            border: 2px solid var(--border-color);
-            border-top-color: var(--accent-cyan);
+            width: 32px;
+            height: 32px;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent-blue);
             border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin-bottom: 20px;
+            animation: spin 0.8s linear infinite;
+            margin-bottom: 16px;
         }
 
         @keyframes spin {
@@ -675,210 +588,187 @@
         }
 
         .loading-text {
-            font-size: 12px;
-            letter-spacing: 3px;
-            text-transform: uppercase;
-            animation: loadingPulse 1.5s ease-in-out infinite;
+            font-size: 14px;
         }
 
-        @keyframes loadingPulse {
-            0%, 100% { opacity: 0.5; }
-            50% { opacity: 1; }
-        }
-
-        /* Error State */
+        /* Error */
         .error {
-            background: rgba(255, 51, 102, 0.1);
-            border: 1px solid rgba(255, 51, 102, 0.3);
-            padding: 25px;
+            background: rgba(255, 86, 48, 0.1);
+            border: 1px solid rgba(255, 86, 48, 0.2);
+            border-radius: 8px;
+            padding: 20px;
             text-align: center;
         }
 
-        .error strong {
+        .error-title {
             color: var(--accent-red);
-            display: block;
-            margin-bottom: 10px;
-            font-family: 'Orbitron', sans-serif;
-            letter-spacing: 2px;
+            font-weight: 600;
+            margin-bottom: 8px;
         }
 
-        .error-details {
+        .error-message {
             color: var(--text-secondary);
-            font-size: 13px;
+            font-size: 14px;
         }
 
         /* Responsive */
         @media (max-width: 1200px) {
-            .main-grid {
+            .content-grid {
                 grid-template-columns: 1fr;
             }
         }
 
         @media (max-width: 768px) {
-            .container {
-                padding: 15px;
+            .header {
+                padding: 0 16px;
+                height: 56px;
             }
 
-            header {
-                flex-direction: column;
-                gap: 20px;
-                text-align: center;
+            .main {
+                padding: 16px;
+            }
+
+            .stats-row {
+                grid-template-columns: 1fr;
+            }
+
+            .metrics-grid {
+                grid-template-columns: 1fr;
+                gap: 24px;
+            }
+
+            .summary-grid {
+                grid-template-columns: 1fr;
             }
 
             .header-right {
-                flex-direction: column;
-                gap: 15px;
+                gap: 12px;
             }
 
-            .logo h1 {
-                font-size: 20px;
+            .connection-status,
+            .last-sync {
+                display: none;
             }
-
-            .gauges-row {
-                grid-template-columns: 1fr;
-                gap: 30px;
-            }
-
-            .stats-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .stat-value {
-                font-size: 36px;
-            }
-
-            th, td {
-                padding: 12px 15px;
-            }
-        }
-
-        /* SVG Gradients */
-        .svg-defs {
-            position: absolute;
-            width: 0;
-            height: 0;
         }
     </style>
 </head>
 <body>
-    <!-- SVG Gradient Definitions -->
-    <svg class="svg-defs">
-        <defs>
-            <linearGradient id="cpuGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stop-color="#00f0ff" />
-                <stop offset="100%" stop-color="#a855f7" />
-            </linearGradient>
-            <linearGradient id="ramGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stop-color="#00ff9d" />
-                <stop offset="100%" stop-color="#00f0ff" />
-            </linearGradient>
-            <linearGradient id="diskGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stop-color="#ff9500" />
-                <stop offset="100%" stop-color="#ff3366" />
-            </linearGradient>
-        </defs>
-    </svg>
-
-    <!-- Background Effects -->
-    <div class="grid-bg"></div>
-    <div class="scanlines"></div>
-
-    <div class="container">
+    <div class="app">
         <!-- Header -->
-        <header>
-            <div class="logo">
-                <div class="logo-icon">P</div>
-                <div>
-                    <h1>PROXMOX</h1>
-                    <div class="subtitle">Control Center v2.0</div>
+        <header class="header">
+            <div class="header-left">
+                <div class="logo">
+                    <div class="logo-mark">P</div>
+                    <div class="logo-text">Proxmox <span>Dashboard</span></div>
                 </div>
             </div>
             <div class="header-right">
-                <div class="status-indicator">
+                <div class="connection-status">
                     <span class="status-dot"></span>
-                    <span class="status-text">System Online</span>
+                    <span class="status-label">Connected</span>
                 </div>
-                <div>
-                    <button class="refresh-btn" onclick="loadData()">Refresh</button>
-                    <div class="last-update">Last Update: <span id="lastUpdate">--:--:--</span></div>
+                <div class="last-sync">
+                    Last sync: <strong id="lastUpdate">--:--:--</strong>
                 </div>
+                <button class="btn btn-primary" onclick="loadData()">
+                    <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+                    </svg>
+                    Refresh
+                </button>
             </div>
         </header>
 
-        <!-- Main Content Grid -->
-        <div class="main-grid">
-            <!-- Node Status Panel -->
-            <div class="panel">
-                <div class="panel-header">
-                    <div class="panel-title">Server Status</div>
+        <!-- Main Content -->
+        <main class="main">
+            <!-- Content Grid -->
+            <div class="content-grid">
+                <!-- Node Status Card -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Server Status</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="node-grid" id="nodeGrid">
+                            <div class="loading">
+                                <div class="spinner"></div>
+                                <div class="loading-text">Loading server data...</div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="panel-body">
-                    <div class="node-grid" id="nodeGrid">
-                        <div class="loading">
+
+                <!-- Fleet Overview Card -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Fleet Overview</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="summary-grid">
+                            <div class="summary-item total">
+                                <div class="summary-icon total">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <rect x="2" y="3" width="20" height="14" rx="2"/>
+                                        <path d="M8 21h8M12 17v4"/>
+                                    </svg>
+                                </div>
+                                <div class="summary-value" id="totalVms">-</div>
+                                <div class="summary-label">Total Instances</div>
+                            </div>
+                            <div class="summary-item running">
+                                <div class="summary-icon running">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polygon points="5 3 19 12 5 21 5 3"/>
+                                    </svg>
+                                </div>
+                                <div class="summary-value" id="runningVms">-</div>
+                                <div class="summary-label">Running</div>
+                            </div>
+                            <div class="summary-item stopped">
+                                <div class="summary-icon stopped">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <rect x="6" y="4" width="12" height="16" rx="1"/>
+                                    </svg>
+                                </div>
+                                <div class="summary-value" id="stoppedVms">-</div>
+                                <div class="summary-label">Stopped</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VMs Table Card -->
+                <div class="card table-card">
+                    <div class="card-header">
+                        <h2 class="card-title">Virtual Machines & Containers</h2>
+                    </div>
+                    <div class="card-body" style="padding: 0;">
+                        <div id="loadingSpinner" class="loading">
                             <div class="spinner"></div>
-                            <div class="loading-text">Connecting to Proxmox...</div>
+                            <div class="loading-text">Loading instances...</div>
                         </div>
+                        <div id="tableContainer" class="table-wrapper" style="display: none;">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Name</th>
+                                        <th>Type</th>
+                                        <th>Status</th>
+                                        <th>CPU</th>
+                                        <th>Memory</th>
+                                        <th>Uptime</th>
+                                        <th>Node</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="vmTable"></tbody>
+                            </table>
+                        </div>
+                        <div id="errorContainer" style="display: none; padding: 20px;"></div>
                     </div>
                 </div>
             </div>
-
-            <!-- Stats Panel -->
-            <div class="panel">
-                <div class="panel-header">
-                    <div class="panel-title">Fleet Overview</div>
-                </div>
-                <div class="panel-body">
-                    <div class="stats-grid">
-                        <div class="stat-card total">
-                            <div class="stat-icon">&#9633;</div>
-                            <div class="stat-value" id="totalVms">-</div>
-                            <div class="stat-label">Total</div>
-                        </div>
-                        <div class="stat-card running">
-                            <div class="stat-icon">&#9654;</div>
-                            <div class="stat-value" id="runningVms">-</div>
-                            <div class="stat-label">Running</div>
-                        </div>
-                        <div class="stat-card stopped">
-                            <div class="stat-icon">&#9724;</div>
-                            <div class="stat-value" id="stoppedVms">-</div>
-                            <div class="stat-label">Stopped</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- VMs Table Panel -->
-        <div class="panel table-panel">
-            <div class="panel-header">
-                <div class="panel-title">Virtual Machines & Containers</div>
-            </div>
-            <div class="panel-body">
-                <div id="loadingSpinner" class="loading">
-                    <div class="spinner"></div>
-                    <div class="loading-text">Loading Fleet Data...</div>
-                </div>
-                <div id="tableContainer" class="table-wrapper" style="display: none;">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Name</th>
-                                <th>Type</th>
-                                <th>Status</th>
-                                <th>CPU</th>
-                                <th>Memory</th>
-                                <th>Uptime</th>
-                                <th>Node</th>
-                            </tr>
-                        </thead>
-                        <tbody id="vmTable"></tbody>
-                    </table>
-                </div>
-                <div id="errorContainer" style="display: none;"></div>
-            </div>
-        </div>
+        </main>
     </div>
 
     <script>
@@ -903,14 +793,14 @@
         }
 
         function createCircularGauge(percent, type) {
-            const radius = 52;
+            const radius = 34;
             const circumference = 2 * Math.PI * radius;
             const offset = circumference - (percent / 100) * circumference;
 
             return `
-                <svg class="circular-gauge" viewBox="0 0 120 120">
-                    <circle class="gauge-bg" cx="60" cy="60" r="${radius}"/>
-                    <circle class="gauge-progress ${type}" cx="60" cy="60" r="${radius}"
+                <svg class="metric-gauge" viewBox="0 0 80 80">
+                    <circle class="gauge-bg" cx="40" cy="40" r="${radius}"/>
+                    <circle class="gauge-fill ${type}" cx="40" cy="40" r="${radius}"
                         stroke-dasharray="${circumference}"
                         stroke-dashoffset="${offset}"/>
                 </svg>
@@ -953,9 +843,9 @@
                     });
 
                     vms.forEach(vm => {
-                        const statusClass = vm.status === 'running' ? 'status-running' : 'status-stopped';
+                        const statusClass = vm.status === 'running' ? 'badge-running' : 'badge-stopped';
                         const statusText = vm.status === 'running' ? 'Running' : 'Stopped';
-                        const typeClass = vm.type === 'VM' ? 'type-vm' : 'type-lxc';
+                        const typeClass = vm.type === 'VM' ? 'badge-vm' : 'badge-lxc';
 
                         const cpuColor = getGaugeColor(vm.cpu_usage || 0);
                         const ramColor = getGaugeColor(vm.mem_percent || 0);
@@ -964,26 +854,26 @@
                             <tr>
                                 <td class="vm-id">${vm.id}</td>
                                 <td class="vm-name">${vm.name}</td>
-                                <td><span class="type-badge ${typeClass}">${vm.type}</span></td>
-                                <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                                <td><span class="badge ${typeClass}">${vm.type}</span></td>
+                                <td><span class="badge ${statusClass}">${statusText}</span></td>
                                 <td>
-                                    <div class="resource-cell">
-                                        <div class="mini-progress">
-                                            <div class="mini-progress-fill ${cpuColor}" style="width: ${vm.cpu_usage || 0}%"></div>
+                                    <div class="resource-bar">
+                                        <div class="bar-track">
+                                            <div class="bar-fill ${cpuColor}" style="width: ${vm.cpu_usage || 0}%"></div>
                                         </div>
-                                        <span class="resource-text">${(vm.cpu_usage || 0).toFixed(0)}% / ${vm.cpu_cores || 1}c</span>
+                                        <span class="bar-text">${(vm.cpu_usage || 0).toFixed(0)}% / ${vm.cpu_cores || 1}c</span>
                                     </div>
                                 </td>
                                 <td>
-                                    <div class="resource-cell">
-                                        <div class="mini-progress">
-                                            <div class="mini-progress-fill ${ramColor}" style="width: ${vm.mem_percent || 0}%"></div>
+                                    <div class="resource-bar">
+                                        <div class="bar-track">
+                                            <div class="bar-fill ${ramColor}" style="width: ${vm.mem_percent || 0}%"></div>
                                         </div>
-                                        <span class="resource-text">${(vm.mem_percent || 0).toFixed(0)}% / ${formatBytes(vm.mem_max)}</span>
+                                        <span class="bar-text">${(vm.mem_percent || 0).toFixed(0)}% / ${formatBytes(vm.mem_max)}</span>
                                     </div>
                                 </td>
-                                <td class="uptime-cell">${vm.status === 'running' ? (vm.uptime_formatted || '-') : '-'}</td>
-                                <td class="node-cell">${vm.node || 'N/A'}</td>
+                                <td class="uptime-text">${vm.status === 'running' ? (vm.uptime_formatted || '-') : '-'}</td>
+                                <td class="node-text">${vm.node || 'N/A'}</td>
                             </tr>
                         `;
                         tbody.innerHTML += row;
@@ -999,8 +889,8 @@
                     document.getElementById('tableContainer').style.display = 'none';
                     document.getElementById('errorContainer').innerHTML = `
                         <div class="error">
-                            <strong>CONNECTION ERROR</strong>
-                            <div class="error-details">Unable to connect to Proxmox API. Please verify your credentials.</div>
+                            <div class="error-title">Connection Error</div>
+                            <div class="error-message">Unable to connect to Proxmox API. Please verify your credentials.</div>
                         </div>
                     `;
                     document.getElementById('errorContainer').style.display = 'block';
@@ -1013,43 +903,49 @@
 
             nodes.forEach(node => {
                 const card = document.createElement('div');
-                card.className = 'node-card';
+                card.className = 'node-item';
                 card.innerHTML = `
                     <div class="node-header">
-                        <div class="node-name">
+                        <div class="node-info">
                             <span class="node-status ${node.status === 'online' ? '' : 'offline'}"></span>
-                            ${node.name.toUpperCase()}
+                            <span class="node-name">${node.name}</span>
                         </div>
-                        <div class="node-uptime">Uptime: ${node.uptime_formatted}</div>
+                        <span class="node-uptime">Uptime: ${node.uptime_formatted}</span>
                     </div>
 
-                    <div class="gauges-row">
-                        <div class="gauge-item">
-                            ${createCircularGauge(node.cpu_usage, 'cpu')}
-                            <div class="gauge-center">
-                                <div class="gauge-value">${node.cpu_usage}</div>
-                                <div class="gauge-unit">%</div>
+                    <div class="metrics-grid">
+                        <div class="metric-item">
+                            <div class="metric-gauge">
+                                ${createCircularGauge(node.cpu_usage, 'cpu')}
+                                <div class="gauge-text">
+                                    <div class="gauge-value">${node.cpu_usage}</div>
+                                    <div class="gauge-unit">%</div>
+                                </div>
                             </div>
-                            <div class="gauge-label">CPU</div>
-                            <div class="gauge-detail">${node.cpu_cores} Cores</div>
+                            <div class="metric-label">CPU</div>
+                            <div class="metric-detail">${node.cpu_cores} Cores</div>
                         </div>
-                        <div class="gauge-item">
-                            ${createCircularGauge(node.mem_percent, 'ram')}
-                            <div class="gauge-center">
-                                <div class="gauge-value">${node.mem_percent}</div>
-                                <div class="gauge-unit">%</div>
+                        <div class="metric-item">
+                            <div class="metric-gauge">
+                                ${createCircularGauge(node.mem_percent, 'ram')}
+                                <div class="gauge-text">
+                                    <div class="gauge-value">${node.mem_percent}</div>
+                                    <div class="gauge-unit">%</div>
+                                </div>
                             </div>
-                            <div class="gauge-label">Memory</div>
-                            <div class="gauge-detail">${formatBytes(node.mem_used)} / ${formatBytes(node.mem_total)}</div>
+                            <div class="metric-label">Memory</div>
+                            <div class="metric-detail">${formatBytes(node.mem_used)} / ${formatBytes(node.mem_total)}</div>
                         </div>
-                        <div class="gauge-item">
-                            ${createCircularGauge(node.disk_percent, 'disk')}
-                            <div class="gauge-center">
-                                <div class="gauge-value">${node.disk_percent}</div>
-                                <div class="gauge-unit">%</div>
+                        <div class="metric-item">
+                            <div class="metric-gauge">
+                                ${createCircularGauge(node.disk_percent, 'disk')}
+                                <div class="gauge-text">
+                                    <div class="gauge-value">${node.disk_percent}</div>
+                                    <div class="gauge-unit">%</div>
+                                </div>
                             </div>
-                            <div class="gauge-label">Storage</div>
-                            <div class="gauge-detail">${formatBytes(node.disk_used)} / ${formatBytes(node.disk_total)}</div>
+                            <div class="metric-label">Storage</div>
+                            <div class="metric-detail">${formatBytes(node.disk_used)} / ${formatBytes(node.disk_total)}</div>
                         </div>
                     </div>
                 `;
