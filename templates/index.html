@@ -2019,6 +2019,7 @@
 
         // ==================== CHARTS ====================
         let nodeChartData = {};
+        let nodeChartType = {};  // Garde le type selectionne par node
 
         function createSVGChart(data, type, width = 300, height = 100, containerId = null) {
             if (!data || data.length === 0) {
@@ -2126,7 +2127,9 @@
                 .then(data => {
                     if (Array.isArray(data)) {
                         nodeChartData[nodeName] = data;
-                        updateNodeChart(nodeName, 'cpu');
+                        // Utiliser le type sauvegarde ou 'cpu' par defaut
+                        const savedType = nodeChartType[nodeName] || 'cpu';
+                        updateNodeChart(nodeName, savedType);
                     }
                 })
                 .catch(err => console.error('Erreur RRD:', err));
@@ -2135,6 +2138,9 @@
         function updateNodeChart(nodeName, type) {
             const container = document.getElementById(`chart-${nodeName}`);
             if (!container || !nodeChartData[nodeName]) return;
+
+            // Sauvegarder le type selectionne
+            nodeChartType[nodeName] = type;
 
             const data = nodeChartData[nodeName];
             const width = container.offsetWidth || 280;
