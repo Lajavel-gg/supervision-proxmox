@@ -1,218 +1,238 @@
-# 🖥️ Supervision Proxmox
+# Supervision Proxmox
 
-Automation script pour déployer rapidement une application web de supervision Proxmox avec un container Alpine ultra-léger.
+Application web de supervision pour Proxmox VE. Deploiement automatise dans un container Alpine LXC ultra-leger.
 
-## 🚀 Installation rapide
+## Presentation
 
-Sur un serveur Proxmox (en tant que root):
+Cette application permet de superviser un cluster Proxmox VE via une interface web moderne et reactive. Elle utilise l'API native de Proxmox pour recuperer les informations en temps reel sur les machines virtuelles, containers et noeuds du cluster.
+
+### Fonctionnalites principales
+
+- **Dashboard temps reel** : Visualisation de l'etat des VMs et containers avec rafraichissement automatique
+- **Monitoring des noeuds** : CPU, RAM, stockage avec jauges circulaires
+- **Graphiques historiques** : Evolution des metriques sur la derniere heure (donnees RRD Proxmox)
+- **Details des VMs** : Panel lateral avec informations detaillees (config, ressources, reseau, stockage)
+- **Activite recente** : Journal des actions du cluster (demarrages, arrets, backups, erreurs)
+- **Filtres et recherche** : Filtrage par status (running/stopped), type (VM/LXC) et recherche par nom
+
+### Captures d'ecran
+
+```
++------------------------------------------------------------------+
+|  Proxmox Dashboard                              [Connected] 10:30 |
++------------------------------------------------------------------+
+|                                                                   |
+|  Server Status              |  Fleet Overview                     |
+|  +-----------------------+  |  +-------+ +-------+ +-------+     |
+|  | CPU    [====    ] 35% |  |  |  12   | |   9   | |   3   |     |
+|  | RAM    [======  ] 58% |  |  | Total | |Running| |Stopped|     |
+|  | Disk   [==      ] 27% |  |  +-------+ +-------+ +-------+     |
+|  +-----------------------+  |                                     |
+|                                                                   |
+|  Virtual Machines & Containers                                    |
+|  +----+----------+-----+--------+------+--------+-------+------+ |
+|  | ID | Name     | Type| Status | CPU  | Memory | Uptime| Node | |
+|  +----+----------+-----+--------+------+--------+-------+------+ |
+|  |100 | web-srv  | LXC | Running| 12%  | 45%    | 5j 2h | prox | |
+|  |101 | db-srv   | VM  | Running| 8%   | 62%    | 5j 2h | prox | |
+|  |102 | backup   | LXC | Stopped| -    | -      | -     | prox | |
+|  +----+----------+-----+--------+------+--------+-------+------+ |
+|                                                                   |
+|  Activite Recente                                                |
+|  - Demarrage VM 101 (db-srv) - root@pam - il y a 2h              |
+|  - Backup VM 100 - OK - il y a 6h                                |
++------------------------------------------------------------------+
+```
+
+## Installation
+
+### Pre-requis
+
+- Serveur Proxmox VE 7.x ou 8.x
+- Acces root au serveur Proxmox
+- Connexion internet (pour telecharger le template Alpine)
+
+### Installation automatique
+
+Executez cette commande sur le serveur Proxmox en tant que root :
 
 ```bash
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/Lajavel-gg/supervision-proxmox/main/install.sh)"
 ```
 
-## 📋 Qu'est-ce que ça fait?
+Le script effectue les operations suivantes :
 
-1. ✅ Crée un container Alpine LXC ultra-léger (5 MB)
-2. ✅ Installe Python3 + Flask (minimalist)
-3. ✅ Déploie l'API de lecture Proxmox
-4. ✅ Lance un dashboard web en temps réel
-5. ✅ Configure le service systemd pour l'auto-redémarrage
+1. Creation d'un utilisateur API Proxmox avec permissions en lecture seule (PVEAuditor)
+2. Generation d'un token API securise
+3. Telechargement du template Alpine Linux
+4. Creation et configuration du container LXC
+5. Installation des dependances (Python3, Flask)
+6. Deploiement de l'application
+7. Configuration du demarrage automatique
 
-## 🌐 Accès
+### Acces au dashboard
 
-Une fois installé, accédez à: `http://<IP-CONTAINER>:5000`
-
-## 📊 Fonctionnalités
-
-- ✅ Liste des VMs et containers
-- ✅ Status en temps réel (running/stopped)
-- ✅ Auto-refresh toutes les 5 secondes
-- ✅ API REST simple
-- ✅ Dashboard minimaliste et ultra-rapide
-- ✅ Consomme très peu de ressources
-
-## 🏗️ Architecture
+Une fois l'installation terminee, accedez a l'interface web :
 
 ```
-[Proxmox Host]
-    ↓
-[Script install.sh]
-    ↓
-[Alpine LXC Container (512 MB RAM)]
-    ├── Python3
-    ├── Flask API
-    └── Dashboard Web (HTML/CSS/JS)
+http://<IP-CONTAINER>:5000
 ```
 
-## 📡 API Endpoints
+## Architecture technique
 
-- `GET /` - Dashboard web
-- `GET /api/vms` - Liste toutes les VMs/containers (JSON)
-- `GET /api/status` - Status général du cluster (JSON)
-- `GET /api/health` - Health check
+```
+Proxmox VE Host
+    |
+    +-- API Proxmox (port 8006)
+    |       |
+    |       v
+    +-- Container LXC Alpine
+            |
+            +-- Python 3 + Flask
+            |       |
+            |       +-- API REST (lecture seule)
+            |       +-- Templates HTML/CSS/JS
+            |
+            +-- Dashboard Web (port 5000)
+```
 
-### Exemples d'appels API
+### Technologies utilisees
+
+| Composant | Technologie | Version |
+|-----------|-------------|---------|
+| Backend | Python / Flask | 3.x / 3.0 |
+| Frontend | HTML5 / CSS3 / JavaScript | - |
+| Container | Alpine Linux | 3.23 |
+| API | Proxmox VE API | 7.x / 8.x |
+
+### Securite
+
+- **Lecture seule** : Le token API utilise le role PVEAuditor (aucune action possible)
+- **Container isole** : L'application tourne dans un LXC dedie
+- **Pas d'authentification** : A implementer pour un usage en production
+
+## API REST
+
+L'application expose plusieurs endpoints JSON :
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /` | Dashboard web |
+| `GET /api/vms` | Liste des VMs et containers |
+| `GET /api/status` | Status general du cluster |
+| `GET /api/nodes` | Informations des noeuds |
+| `GET /api/nodes/<node>/rrddata` | Historique metriques d'un noeud |
+| `GET /api/vm/<node>/<type>/<vmid>` | Details d'une VM/LXC |
+| `GET /api/vm/<node>/<type>/<vmid>/rrddata` | Historique metriques d'une VM |
+| `GET /api/tasks` | Activite recente du cluster |
+| `GET /api/health` | Health check |
+
+### Exemples
 
 ```bash
-# Récupérer toutes les VMs
-curl http://localhost:5000/api/vms
+# Liste des VMs
+curl http://192.168.1.100:5000/api/vms
 
-# Récupérer le status
-curl http://localhost:5000/api/status
+# Status du cluster
+curl http://192.168.1.100:5000/api/status
 
-# Health check
-curl http://localhost:5000/api/health
+# Details d'une VM
+curl http://192.168.1.100:5000/api/vm/proxmox/VM/101
+
+# Historique CPU d'un noeud (derniere heure)
+curl http://192.168.1.100:5000/api/nodes/proxmox/rrddata?timeframe=hour
 ```
 
-## 📁 Structure du projet
+## Maintenance
 
-```
-supervision-proxmox/
-├── install.sh              # Script d'installation automatique
-├── app.py                  # Application Flask + API
-├── requirements.txt        # Dépendances Python (minimales)
-├── templates/
-│   └── index.html         # Dashboard HTML/CSS/JS
-├── README.md              # Cette documentation
-└── .gitignore
-```
-
-## 🔧 Développement
-
-### Clone le repo
+### Mise a jour de l'application
 
 ```bash
-git clone https://github.com/Lajavel-gg/supervision-proxmox.git
-cd supervision-proxmox
-```
+# Remplacer VMID par l'ID de votre container (ex: 100)
 
-### Installation locale (sans Proxmox)
-
-```bash
-# Créer un environnement virtuel
-python3 -m venv venv
-source venv/bin/activate  # Linux/Mac
-# ou
-venv\Scripts\activate  # Windows
-
-# Installer les dépendances
-pip install -r requirements.txt
-
-# Lancer l'app
-python3 app.py
-```
-
-Accédez à `http://localhost:5000`
-
-## 🔄 Mise a jour
-
-Pour mettre a jour l'application sans reinstaller (remplacez `VMID` par l'ID de votre container):
-
-```bash
-# Mettre a jour le code depuis GitHub
+# Telecharger les mises a jour
 pct exec VMID -- git -C /app pull
 
 # Redemarrer l'application
 pct exec VMID -- pkill -f "python3 /app/app.py"
-pct exec VMID -- sh -c ". /etc/supervision.env && setsid /app/venv/bin/python3 /app/app.py > /var/log/supervision.log 2>&1 &"
+pct enter VMID
+. /etc/supervision.env && nohup /app/venv/bin/python3 /app/app.py > /var/log/supervision.log 2>&1 &
+exit
 ```
 
-Ou en une seule commande:
+### Commandes utiles
 
 ```bash
-pct exec VMID -- sh -c "git -C /app pull && pkill -f 'python3 /app/app.py'; . /etc/supervision.env && setsid /app/venv/bin/python3 /app/app.py > /var/log/supervision.log 2>&1 &"
+# Voir les logs
+pct exec VMID -- tail -f /var/log/supervision.log
+
+# Verifier si l'application tourne
+pct exec VMID -- ps aux | grep python
+
+# Arreter l'application
+pct exec VMID -- pkill -f "python3 /app/app.py"
+
+# Redemarrer le container
+pct reboot VMID
+
+# Supprimer le container
+pct destroy VMID --purge
 ```
 
-## 🛠️ Troubleshooting
+## Structure du projet
 
-### Voir les logs
+```
+supervision-proxmox/
+|-- install.sh              # Script d'installation automatique
+|-- app.py                  # Application Flask (API + routes)
+|-- requirements.txt        # Dependances Python
+|-- templates/
+|   +-- index.html          # Dashboard (HTML/CSS/JS)
+|-- README.md
++-- .gitignore
+```
+
+## Performance
+
+| Metrique | Valeur |
+|----------|--------|
+| Taille du container | ~200 MB |
+| RAM utilisee | 50-100 MB |
+| CPU au repos | < 1% |
+| Rafraichissement | 5 secondes |
+
+## Developpement local
 
 ```bash
-pct exec 200 -- tail -f /var/log/supervision.log
+# Cloner le projet
+git clone https://github.com/Lajavel-gg/supervision-proxmox.git
+cd supervision-proxmox
+
+# Creer l'environnement virtuel
+python3 -m venv venv
+source venv/bin/activate
+
+# Installer les dependances
+pip install -r requirements.txt
+
+# Configurer les variables d'environnement
+export PROXMOX_HOST="192.168.1.1"
+export PROXMOX_API_USER="supervision@pve"
+export PROXMOX_API_TOKEN_NAME="supervision-token"
+export PROXMOX_API_TOKEN="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+
+# Lancer l'application
+python3 app.py
 ```
 
-### Redémarrer le service
-
-```bash
-pct exec 200 -- rc-service supervision restart
-```
-
-### Arrêter le container
-
-```bash
-pct stop 200
-```
-
-### Redémarrer le container
-
-```bash
-pct reboot 200
-```
-
-### Supprimer le container
-
-```bash
-pct destroy 200 --purge
-```
-
-## 🐛 Erreurs courantes
-
-### "Erreur: Ce script doit être exécuté sur Proxmox"
-- Le script doit être lancé sur la machine Proxmox directement
-- Connectez-vous en SSH au serveur Proxmox et relancez le script
-
-### "Container $VMID existe déjà"
-- Le script détecte qu'un container avec cet ID existe
-- Répondez "y" pour le supprimer et le recréer
-- Ou changez `VMID=200` à une autre valeur dans le script
-
-### Dashboard vide ou "Erreur"
-- Vérifiez que le container est démarré: `pct status 200`
-- Vérifiez les logs: `pct exec 200 -- tail -f /var/log/supervision.log`
-- Vérifiez que le host Proxmox a bien les commandes `qm` et `pct`
-
-## 📊 Performance
-
-- **Taille du container**: ~200 MB
-- **RAM utilisée**: ~50-100 MB (très léger)
-- **CPU**: < 1% au repos
-- **Refresh**: 5 secondes par défaut
-
-## 🔐 Sécurité
-
-- ⚠️ Le dashboard n'a pas d'authentification (à faire!)
-- Le container Alpine est ultra-minimaliste pour réduire les attaques
-- À améliorer: ajouter un login/password
-
-## 🚀 Améliorations futures
-
-- [ ] Authentification (login/password)
-- [ ] Graphiques temps réel (CPU, RAM, Network)
-- [ ] Alertes (Email, Slack, Discord)
-- [ ] Actions (start/stop VM depuis le web)
-- [ ] Base de données pour l'historique
-- [ ] API Plus complète (Proxmox API native)
-
-## 📝 Licence
+## Licence
 
 MIT
 
-## 👨‍💻 Auteur
+## Auteur
 
 Lajavel-gg
 
-## 🤝 Contribution
+---
 
-Les pull requests sont bienvenues!
-
-```bash
-git checkout -b feature/ma-feature
-git commit -m "Add ma-feature"
-git push origin feature/ma-feature
-```
-
-Puis créez une Pull Request!
-
-## 📞 Support
-
-Pour des problèmes, ouvrez une issue sur GitHub: https://github.com/Lajavel-gg/supervision-proxmox/issues
+Projet realise dans le cadre d'un fil rouge de formation.
