@@ -2123,12 +2123,21 @@
             return Math.round(bytes / Math.pow(k, i)) + sizes[i];
         }
 
+        let lastChartUpdate = {};
+
         function loadNodeCharts(nodeName) {
+            // Ne recharge que toutes les 30 secondes pour eviter le flash
+            const now = Date.now();
+            if (lastChartUpdate[nodeName] && (now - lastChartUpdate[nodeName]) < 30000) {
+                return; // Pas encore le temps de recharger
+            }
+
             fetch(`/api/nodes/${nodeName}/rrddata?timeframe=hour`)
                 .then(r => r.json())
                 .then(data => {
                     if (Array.isArray(data)) {
                         nodeChartData[nodeName] = data;
+                        lastChartUpdate[nodeName] = now;
                         // Utiliser le type sauvegarde ou 'cpu' par defaut
                         const savedType = nodeChartType[nodeName] || 'cpu';
                         updateNodeChart(nodeName, savedType);
@@ -2208,76 +2217,117 @@
             btn.classList.add('active');
         }
 
-        // Modifier renderNodes pour ajouter les graphiques
-        const originalRenderNodes = renderNodes;
+        // Modifier renderNodes pour ajouter les graphiques (sans flash)
+        let nodesInitialized = false;
+
         renderNodes = function(nodes) {
             const grid = document.getElementById('nodeGrid');
-            grid.innerHTML = '';
 
+            // Premiere initialisation: creer la structure
+            if (!nodesInitialized) {
+                grid.innerHTML = '';
+                nodes.forEach(node => {
+                    const card = document.createElement('div');
+                    card.className = 'node-item';
+                    card.id = `node-${node.name}`;
+                    card.innerHTML = `
+                        <div class="node-header">
+                            <div class="node-info">
+                                <span class="node-status" id="status-${node.name}"></span>
+                                <span class="node-name">${node.name}</span>
+                            </div>
+                            <span class="node-uptime" id="uptime-${node.name}">Uptime: -</span>
+                        </div>
+
+                        <div class="metrics-grid">
+                            <div class="metric-item">
+                                <div class="metric-gauge" id="gauge-cpu-${node.name}"></div>
+                                <div class="metric-label">CPU</div>
+                                <div class="metric-detail" id="detail-cpu-${node.name}">-</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-gauge" id="gauge-mem-${node.name}"></div>
+                                <div class="metric-label">Memory</div>
+                                <div class="metric-detail" id="detail-mem-${node.name}">-</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-gauge" id="gauge-disk-${node.name}"></div>
+                                <div class="metric-label">Storage</div>
+                                <div class="metric-detail" id="detail-disk-${node.name}">-</div>
+                            </div>
+                        </div>
+
+                        <div class="chart-container">
+                            <div class="chart-tabs">
+                                <button class="chart-tab active" data-type="cpu" onclick="updateNodeChart('${node.name}', 'cpu')">CPU</button>
+                                <button class="chart-tab" data-type="mem_percent" onclick="updateNodeChart('${node.name}', 'mem_percent')">RAM</button>
+                                <button class="chart-tab" data-type="netin" onclick="updateNodeChart('${node.name}', 'netin')">Reseau</button>
+                            </div>
+                            <div class="mini-chart" id="chart-${node.name}">
+                                <div class="loading" style="padding: 10px;">
+                                    <div class="spinner" style="width: 20px; height: 20px;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    grid.appendChild(card);
+                });
+                nodesInitialized = true;
+            }
+
+            // Mettre a jour les valeurs sans reconstruire le DOM
             nodes.forEach(node => {
-                const card = document.createElement('div');
-                card.className = 'node-item';
-                card.innerHTML = `
-                    <div class="node-header">
-                        <div class="node-info">
-                            <span class="node-status ${node.status === 'online' ? '' : 'offline'}"></span>
-                            <span class="node-name">${node.name}</span>
-                        </div>
-                        <span class="node-uptime">Uptime: ${node.uptime_formatted}</span>
-                    </div>
+                // Status
+                const statusEl = document.getElementById(`status-${node.name}`);
+                if (statusEl) statusEl.className = `node-status ${node.status === 'online' ? '' : 'offline'}`;
 
-                    <div class="metrics-grid">
-                        <div class="metric-item">
-                            <div class="metric-gauge">
-                                ${createCircularGauge(node.cpu_usage, 'cpu')}
-                                <div class="gauge-text">
-                                    <div class="gauge-value">${node.cpu_usage}</div>
-                                    <div class="gauge-unit">%</div>
-                                </div>
-                            </div>
-                            <div class="metric-label">CPU</div>
-                            <div class="metric-detail">${node.cpu_cores} Cores</div>
-                        </div>
-                        <div class="metric-item">
-                            <div class="metric-gauge">
-                                ${createCircularGauge(node.mem_percent, 'ram')}
-                                <div class="gauge-text">
-                                    <div class="gauge-value">${node.mem_percent}</div>
-                                    <div class="gauge-unit">%</div>
-                                </div>
-                            </div>
-                            <div class="metric-label">Memory</div>
-                            <div class="metric-detail">${formatBytes(node.mem_used)} / ${formatBytes(node.mem_total)}</div>
-                        </div>
-                        <div class="metric-item">
-                            <div class="metric-gauge">
-                                ${createCircularGauge(node.disk_percent, 'disk')}
-                                <div class="gauge-text">
-                                    <div class="gauge-value">${node.disk_percent}</div>
-                                    <div class="gauge-unit">%</div>
-                                </div>
-                            </div>
-                            <div class="metric-label">Storage</div>
-                            <div class="metric-detail">${formatBytes(node.disk_used)} / ${formatBytes(node.disk_total)}</div>
-                        </div>
-                    </div>
+                // Uptime
+                const uptimeEl = document.getElementById(`uptime-${node.name}`);
+                if (uptimeEl) uptimeEl.textContent = `Uptime: ${node.uptime_formatted}`;
 
-                    <div class="chart-container">
-                        <div class="chart-tabs">
-                            <button class="chart-tab active" data-type="cpu" onclick="updateNodeChart('${node.name}', 'cpu')">CPU</button>
-                            <button class="chart-tab" data-type="mem_percent" onclick="updateNodeChart('${node.name}', 'mem_percent')">RAM</button>
-                            <button class="chart-tab" data-type="netin" onclick="updateNodeChart('${node.name}', 'netin')">Reseau</button>
+                // CPU gauge
+                const cpuGauge = document.getElementById(`gauge-cpu-${node.name}`);
+                if (cpuGauge) {
+                    cpuGauge.innerHTML = `
+                        ${createCircularGauge(node.cpu_usage, 'cpu')}
+                        <div class="gauge-text">
+                            <div class="gauge-value">${node.cpu_usage}</div>
+                            <div class="gauge-unit">%</div>
                         </div>
-                        <div class="mini-chart" id="chart-${node.name}">
-                            <div class="loading" style="padding: 10px;">
-                                <div class="spinner" style="width: 20px; height: 20px;"></div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-                grid.appendChild(card);
+                    `;
+                }
+                const cpuDetail = document.getElementById(`detail-cpu-${node.name}`);
+                if (cpuDetail) cpuDetail.textContent = `${node.cpu_cores} Cores`;
 
-                // Charger les donnees du graphique
+                // Memory gauge
+                const memGauge = document.getElementById(`gauge-mem-${node.name}`);
+                if (memGauge) {
+                    memGauge.innerHTML = `
+                        ${createCircularGauge(node.mem_percent, 'ram')}
+                        <div class="gauge-text">
+                            <div class="gauge-value">${node.mem_percent}</div>
+                            <div class="gauge-unit">%</div>
+                        </div>
+                    `;
+                }
+                const memDetail = document.getElementById(`detail-mem-${node.name}`);
+                if (memDetail) memDetail.textContent = `${formatBytes(node.mem_used)} / ${formatBytes(node.mem_total)}`;
+
+                // Disk gauge
+                const diskGauge = document.getElementById(`gauge-disk-${node.name}`);
+                if (diskGauge) {
+                    diskGauge.innerHTML = `
+                        ${createCircularGauge(node.disk_percent, 'disk')}
+                        <div class="gauge-text">
+                            <div class="gauge-value">${node.disk_percent}</div>
+                            <div class="gauge-unit">%</div>
+                        </div>
+                    `;
+                }
+                const diskDetail = document.getElementById(`detail-disk-${node.name}`);
+                if (diskDetail) diskDetail.textContent = `${formatBytes(node.disk_used)} / ${formatBytes(node.disk_total)}`;
+
+                // Charger les graphiques (ne recharge pas si deja charge)
                 loadNodeCharts(node.name);
             });
         };
