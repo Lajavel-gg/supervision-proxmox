@@ -909,6 +909,162 @@
             background: var(--bg-hover);
         }
 
+        /* Mini Charts */
+        .chart-container {
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border-subtle);
+        }
+
+        .chart-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .chart-tab {
+            padding: 6px 12px;
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-secondary);
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .chart-tab:hover {
+            border-color: var(--text-muted);
+        }
+
+        .chart-tab.active {
+            background: var(--accent-blue);
+            border-color: var(--accent-blue);
+            color: white;
+        }
+
+        .mini-chart {
+            height: 80px;
+            width: 100%;
+            position: relative;
+        }
+
+        .mini-chart svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .chart-line {
+            fill: none;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .chart-area {
+            opacity: 0.15;
+        }
+
+        .chart-line.cpu { stroke: var(--accent-blue); }
+        .chart-area.cpu { fill: var(--accent-blue); }
+        .chart-line.ram { stroke: var(--accent-green); }
+        .chart-area.ram { fill: var(--accent-green); }
+        .chart-line.net { stroke: var(--accent-purple); }
+        .chart-area.net { fill: var(--accent-purple); }
+
+        .chart-legend {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 8px;
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        /* Activity / Logs */
+        .activity-card {
+            grid-column: 1 / -1;
+        }
+
+        .activity-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .activity-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .activity-item:last-child {
+            border-bottom: none;
+        }
+
+        .activity-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .activity-icon.success {
+            background: rgba(54, 179, 126, 0.15);
+            color: var(--accent-green);
+        }
+
+        .activity-icon.error {
+            background: rgba(255, 86, 48, 0.15);
+            color: var(--accent-red);
+        }
+
+        .activity-icon.running {
+            background: rgba(76, 154, 255, 0.15);
+            color: var(--accent-blue);
+        }
+
+        .activity-icon svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        .activity-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .activity-title {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-primary);
+            margin-bottom: 2px;
+        }
+
+        .activity-meta {
+            font-size: 12px;
+            color: var(--text-muted);
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .activity-time {
+            font-size: 12px;
+            color: var(--text-muted);
+            white-space: nowrap;
+        }
+
+        .activity-empty {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-muted);
+        }
+
         /* Responsive */
         @media (max-width: 1200px) {
             .content-grid {
@@ -1083,6 +1239,26 @@
                             </table>
                         </div>
                         <div id="errorContainer" style="display: none; padding: 20px;"></div>
+                    </div>
+                </div>
+
+                <!-- Activity / Logs Card -->
+                <div class="card activity-card">
+                    <div class="card-header">
+                        <h2 class="card-title">Activite Recente</h2>
+                        <div class="filter-group">
+                            <button class="filter-btn active" onclick="filterActivity('all', this)">Tous</button>
+                            <button class="filter-btn" onclick="filterActivity('success', this)">Succes</button>
+                            <button class="filter-btn" onclick="filterActivity('error', this)">Erreurs</button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="activity-list" id="activityList">
+                            <div class="loading">
+                                <div class="spinner"></div>
+                                <div class="loading-text">Chargement des activites...</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1593,7 +1769,319 @@
             }
 
             document.getElementById('detailsContent').innerHTML = html;
+
+            // Charger les graphiques pour la VM
+            loadVMCharts(vm.node, vm.type, vm.id);
         }
+
+        // ==================== ACTIVITY / LOGS ====================
+        let allTasks = [];
+        let currentActivityFilter = 'all';
+
+        // Charger l'activite au demarrage
+        loadActivity();
+
+        function loadActivity() {
+            fetch('/api/tasks?limit=30')
+                .then(r => r.json())
+                .then(tasks => {
+                    if (Array.isArray(tasks)) {
+                        allTasks = tasks;
+                        renderActivity(tasks);
+                    }
+                })
+                .catch(err => {
+                    console.error('Erreur chargement activite:', err);
+                    document.getElementById('activityList').innerHTML = `
+                        <div class="activity-empty">Impossible de charger l'activite</div>
+                    `;
+                });
+        }
+
+        function filterActivity(filter, btn) {
+            currentActivityFilter = filter;
+
+            // Update buttons
+            btn.parentElement.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            // Filter and render
+            let filtered = allTasks;
+            if (filter === 'success') {
+                filtered = allTasks.filter(t => t.status === 'success');
+            } else if (filter === 'error') {
+                filtered = allTasks.filter(t => t.status === 'error');
+            }
+            renderActivity(filtered);
+        }
+
+        function renderActivity(tasks) {
+            const list = document.getElementById('activityList');
+
+            if (!tasks || tasks.length === 0) {
+                list.innerHTML = '<div class="activity-empty">Aucune activite recente</div>';
+                return;
+            }
+
+            let html = '';
+            tasks.forEach(task => {
+                const icon = getActivityIcon(task.status);
+                const time = formatTaskTime(task.starttime);
+                const duration = task.duration > 0 ? formatDuration(task.duration) : '';
+
+                html += `
+                    <div class="activity-item">
+                        <div class="activity-icon ${task.status}">
+                            ${icon}
+                        </div>
+                        <div class="activity-content">
+                            <div class="activity-title">${task.description}${task.vmid ? ' - ' + task.vmid : ''}</div>
+                            <div class="activity-meta">
+                                <span>${task.node}</span>
+                                <span>${task.user}</span>
+                                ${duration ? `<span>${duration}</span>` : ''}
+                                ${task.error ? `<span style="color: var(--accent-red);">${task.error}</span>` : ''}
+                            </div>
+                        </div>
+                        <div class="activity-time">${time}</div>
+                    </div>
+                `;
+            });
+
+            list.innerHTML = html;
+        }
+
+        function getActivityIcon(status) {
+            if (status === 'success') {
+                return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>';
+            } else if (status === 'error') {
+                return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>';
+            } else {
+                return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>';
+            }
+        }
+
+        function formatTaskTime(timestamp) {
+            if (!timestamp) return '-';
+            const date = new Date(timestamp * 1000);
+            const now = new Date();
+            const diff = (now - date) / 1000;
+
+            if (diff < 60) return 'A l\'instant';
+            if (diff < 3600) return Math.floor(diff / 60) + ' min';
+            if (diff < 86400) return Math.floor(diff / 3600) + 'h';
+            return date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+        }
+
+        function formatDuration(seconds) {
+            if (seconds < 60) return seconds + 's';
+            if (seconds < 3600) return Math.floor(seconds / 60) + 'm ' + (seconds % 60) + 's';
+            return Math.floor(seconds / 3600) + 'h ' + Math.floor((seconds % 3600) / 60) + 'm';
+        }
+
+        // ==================== CHARTS ====================
+        let nodeChartData = {};
+
+        function createSVGChart(data, type, width = 300, height = 60) {
+            if (!data || data.length === 0) {
+                return '<div style="text-align:center;color:var(--text-muted);font-size:12px;padding:20px;">Pas de donnees</div>';
+            }
+
+            // Filtrer les donnees valides
+            const validData = data.filter(d => d && d[type] !== undefined && d[type] !== null);
+            if (validData.length === 0) {
+                return '<div style="text-align:center;color:var(--text-muted);font-size:12px;padding:20px;">Pas de donnees</div>';
+            }
+
+            const values = validData.map(d => d[type]);
+            const maxVal = Math.max(...values, 1);
+            const minVal = Math.min(...values, 0);
+            const range = maxVal - minVal || 1;
+
+            const padding = 2;
+            const chartWidth = width - padding * 2;
+            const chartHeight = height - padding * 2;
+
+            // Creer les points
+            const points = validData.map((d, i) => {
+                const x = padding + (i / (validData.length - 1 || 1)) * chartWidth;
+                const y = padding + chartHeight - ((d[type] - minVal) / range) * chartHeight;
+                return `${x},${y}`;
+            }).join(' ');
+
+            // Creer le path pour l'area
+            const areaPath = `M${padding},${height - padding} L${points} L${width - padding},${height - padding} Z`;
+
+            const colorClass = type === 'cpu' ? 'cpu' : (type === 'mem_percent' ? 'ram' : 'net');
+
+            return `
+                <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none">
+                    <path class="chart-area ${colorClass}" d="${areaPath}"/>
+                    <polyline class="chart-line ${colorClass}" points="${points}"/>
+                </svg>
+            `;
+        }
+
+        function loadNodeCharts(nodeName) {
+            fetch(`/api/nodes/${nodeName}/rrddata?timeframe=hour`)
+                .then(r => r.json())
+                .then(data => {
+                    if (Array.isArray(data)) {
+                        nodeChartData[nodeName] = data;
+                        updateNodeChart(nodeName, 'cpu');
+                    }
+                })
+                .catch(err => console.error('Erreur RRD:', err));
+        }
+
+        function updateNodeChart(nodeName, type) {
+            const container = document.getElementById(`chart-${nodeName}`);
+            if (!container || !nodeChartData[nodeName]) return;
+
+            const data = nodeChartData[nodeName];
+            container.innerHTML = createSVGChart(data, type);
+
+            // Mettre a jour les boutons
+            const tabs = container.parentElement.querySelectorAll('.chart-tab');
+            tabs.forEach(tab => {
+                tab.classList.toggle('active', tab.dataset.type === type);
+            });
+        }
+
+        function loadVMCharts(node, type, vmid) {
+            fetch(`/api/vm/${node}/${type}/${vmid}/rrddata?timeframe=hour`)
+                .then(r => r.json())
+                .then(data => {
+                    if (Array.isArray(data) && data.length > 0) {
+                        renderVMChartSection(data);
+                    }
+                })
+                .catch(err => console.error('Erreur RRD VM:', err));
+        }
+
+        function renderVMChartSection(data) {
+            const detailsContent = document.getElementById('detailsContent');
+            const existingChart = document.getElementById('vmChartSection');
+            if (existingChart) existingChart.remove();
+
+            const chartHtml = `
+                <div class="detail-section" id="vmChartSection">
+                    <div class="section-title">Historique (derniere heure)</div>
+                    <div class="chart-tabs">
+                        <button class="chart-tab active" onclick="switchVMChart('cpu', this)">CPU</button>
+                        <button class="chart-tab" onclick="switchVMChart('mem_percent', this)">RAM</button>
+                        <button class="chart-tab" onclick="switchVMChart('netin', this)">Reseau</button>
+                    </div>
+                    <div class="mini-chart" id="vmChart">
+                        ${createSVGChart(data, 'cpu', 400, 80)}
+                    </div>
+                    <div class="chart-legend">
+                        <span>-1h</span>
+                        <span>Maintenant</span>
+                    </div>
+                </div>
+            `;
+
+            // Stocker les donnees pour les switchs
+            window.currentVMChartData = data;
+
+            // Inserer apres la section ressources
+            const sections = detailsContent.querySelectorAll('.detail-section');
+            if (sections.length >= 2) {
+                sections[1].insertAdjacentHTML('afterend', chartHtml);
+            } else {
+                detailsContent.insertAdjacentHTML('beforeend', chartHtml);
+            }
+        }
+
+        function switchVMChart(type, btn) {
+            if (!window.currentVMChartData) return;
+
+            const container = document.getElementById('vmChart');
+            container.innerHTML = createSVGChart(window.currentVMChartData, type, 400, 80);
+
+            // Update tabs
+            btn.parentElement.querySelectorAll('.chart-tab').forEach(t => t.classList.remove('active'));
+            btn.classList.add('active');
+        }
+
+        // Modifier renderNodes pour ajouter les graphiques
+        const originalRenderNodes = renderNodes;
+        renderNodes = function(nodes) {
+            const grid = document.getElementById('nodeGrid');
+            grid.innerHTML = '';
+
+            nodes.forEach(node => {
+                const card = document.createElement('div');
+                card.className = 'node-item';
+                card.innerHTML = `
+                    <div class="node-header">
+                        <div class="node-info">
+                            <span class="node-status ${node.status === 'online' ? '' : 'offline'}"></span>
+                            <span class="node-name">${node.name}</span>
+                        </div>
+                        <span class="node-uptime">Uptime: ${node.uptime_formatted}</span>
+                    </div>
+
+                    <div class="metrics-grid">
+                        <div class="metric-item">
+                            <div class="metric-gauge">
+                                ${createCircularGauge(node.cpu_usage, 'cpu')}
+                                <div class="gauge-text">
+                                    <div class="gauge-value">${node.cpu_usage}</div>
+                                    <div class="gauge-unit">%</div>
+                                </div>
+                            </div>
+                            <div class="metric-label">CPU</div>
+                            <div class="metric-detail">${node.cpu_cores} Cores</div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-gauge">
+                                ${createCircularGauge(node.mem_percent, 'ram')}
+                                <div class="gauge-text">
+                                    <div class="gauge-value">${node.mem_percent}</div>
+                                    <div class="gauge-unit">%</div>
+                                </div>
+                            </div>
+                            <div class="metric-label">Memory</div>
+                            <div class="metric-detail">${formatBytes(node.mem_used)} / ${formatBytes(node.mem_total)}</div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-gauge">
+                                ${createCircularGauge(node.disk_percent, 'disk')}
+                                <div class="gauge-text">
+                                    <div class="gauge-value">${node.disk_percent}</div>
+                                    <div class="gauge-unit">%</div>
+                                </div>
+                            </div>
+                            <div class="metric-label">Storage</div>
+                            <div class="metric-detail">${formatBytes(node.disk_used)} / ${formatBytes(node.disk_total)}</div>
+                        </div>
+                    </div>
+
+                    <div class="chart-container">
+                        <div class="chart-tabs">
+                            <button class="chart-tab active" data-type="cpu" onclick="updateNodeChart('${node.name}', 'cpu')">CPU</button>
+                            <button class="chart-tab" data-type="mem_percent" onclick="updateNodeChart('${node.name}', 'mem_percent')">RAM</button>
+                            <button class="chart-tab" data-type="netin" onclick="updateNodeChart('${node.name}', 'netin')">Reseau</button>
+                        </div>
+                        <div class="mini-chart" id="chart-${node.name}">
+                            <div class="loading" style="padding: 10px;">
+                                <div class="spinner" style="width: 20px; height: 20px;"></div>
+                            </div>
+                        </div>
+                        <div class="chart-legend">
+                            <span>-1h</span>
+                            <span>Maintenant</span>
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(card);
+
+                // Charger les donnees du graphique
+                loadNodeCharts(node.name);
+            });
+        };
     </script>
 </body>
 </html>

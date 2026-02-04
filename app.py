@@ -8,7 +8,7 @@ Connexion à l'API Proxmox avec Token API
 import os
 import requests
 from datetime import datetime, timedelta
-from flask import Flask, render_template, jsonify
+from flask import Flask, render_template, jsonify, request
 
 # Configuration Proxmox depuis les variables d'environnement
 PROXMOX_HOST = os.getenv("PROXMOX_HOST", "localhost")
@@ -370,6 +370,176 @@ def api_vm_details(node, vmtype, vmid):
     except Exception as e:
         print(f"Erreur recuperation details VM: {e}")
         return jsonify({'error': str(e)}), 500
+
+@app.route('/api/nodes/<node>/rrddata')
+def api_node_rrddata(node):
+    """API: historique RRD d'un noeud (CPU, RAM, etc sur 24h)"""
+    try:
+        headers = get_headers()
+        timeframe = request.args.get('timeframe', 'day')  # hour, day, week, month, year
+
+        response = requests.get(
+            f"{PROXMOX_API_URL}/nodes/{node}/rrddata",
+            headers=headers,
+            params={'timeframe': timeframe},
+            verify=False,
+            timeout=10
+        )
+
+        if response.status_code != 200:
+            return jsonify({'error': 'Impossible de recuperer les donnees RRD'}), 500
+
+        data = response.json().get('data', [])
+
+        # Formater les donnees pour les graphiques
+        formatted = []
+        for point in data:
+            if point.get('time'):
+                formatted.append({
+                    'time': point.get('time'),
+                    'cpu': round(point.get('cpu', 0) * 100, 1) if point.get('cpu') else 0,
+                    'mem_used': point.get('memused', 0),
+                    'mem_total': point.get('memtotal', 0),
+                    'mem_percent': round((point.get('memused', 0) / max(point.get('memtotal', 1), 1)) * 100, 1) if point.get('memused') else 0,
+                    'netin': point.get('netin', 0),
+                    'netout': point.get('netout', 0),
+                    'diskread': point.get('diskread', 0),
+                    'diskwrite': point.get('diskwrite', 0)
+                })
+
+        return jsonify(formatted)
+
+    except Exception as e:
+        print(f"Erreur RRD node: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/vm/<node>/<vmtype>/<int:vmid>/rrddata')
+def api_vm_rrddata(node, vmtype, vmid):
+    """API: historique RRD d'une VM/LXC (CPU, RAM, etc sur 24h)"""
+    try:
+        headers = get_headers()
+        endpoint_type = "qemu" if vmtype.upper() == "VM" else "lxc"
+        timeframe = request.args.get('timeframe', 'day')
+
+        response = requests.get(
+            f"{PROXMOX_API_URL}/nodes/{node}/{endpoint_type}/{vmid}/rrddata",
+            headers=headers,
+            params={'timeframe': timeframe},
+            verify=False,
+            timeout=10
+        )
+
+        if response.status_code != 200:
+            return jsonify({'error': 'Impossible de recuperer les donnees RRD'}), 500
+
+        data = response.json().get('data', [])
+
+        # Formater les donnees pour les graphiques
+        formatted = []
+        for point in data:
+            if point.get('time'):
+                formatted.append({
+                    'time': point.get('time'),
+                    'cpu': round(point.get('cpu', 0) * 100, 1) if point.get('cpu') else 0,
+                    'mem_used': point.get('mem', 0),
+                    'mem_max': point.get('maxmem', 0),
+                    'mem_percent': round((point.get('mem', 0) / max(point.get('maxmem', 1), 1)) * 100, 1) if point.get('mem') else 0,
+                    'netin': point.get('netin', 0),
+                    'netout': point.get('netout', 0),
+                    'diskread': point.get('diskread', 0),
+                    'diskwrite': point.get('diskwrite', 0)
+                })
+
+        return jsonify(formatted)
+
+    except Exception as e:
+        print(f"Erreur RRD VM: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/tasks')
+def api_tasks():
+    """API: liste des taches/actions recentes du cluster"""
+    try:
+        headers = get_headers()
+        limit = request.args.get('limit', 50, type=int)
+
+        # Recuperer les taches du cluster
+        response = requests.get(
+            f"{PROXMOX_API_URL}/cluster/tasks",
+            headers=headers,
+            verify=False,
+            timeout=10
+        )
+
+        if response.status_code != 200:
+            return jsonify({'error': 'Impossible de recuperer les taches'}), 500
+
+        tasks = response.json().get('data', [])
+
+        # Trier par date (plus recent en premier) et limiter
+        tasks.sort(key=lambda x: x.get('starttime', 0), reverse=True)
+        tasks = tasks[:limit]
+
+        # Formater les taches
+        formatted = []
+        for task in tasks:
+            # Determiner le status
+            status = 'running'
+            if task.get('endtime'):
+                status = 'success' if task.get('status') == 'OK' else 'error'
+
+            # Formatter le type de tache
+            task_type = task.get('type', 'unknown')
+            description = task_type
+
+            # Descriptions plus lisibles
+            type_descriptions = {
+                'qmstart': 'Demarrage VM',
+                'qmstop': 'Arret VM',
+                'qmreboot': 'Redemarrage VM',
+                'qmshutdown': 'Extinction VM',
+                'qmcreate': 'Creation VM',
+                'qmdestroy': 'Suppression VM',
+                'qmmigrate': 'Migration VM',
+                'qmclone': 'Clone VM',
+                'vzstart': 'Demarrage LXC',
+                'vzstop': 'Arret LXC',
+                'vzreboot': 'Redemarrage LXC',
+                'vzshutdown': 'Extinction LXC',
+                'vzcreate': 'Creation LXC',
+                'vzdestroy': 'Suppression LXC',
+                'vzmigrate': 'Migration LXC',
+                'vzdump': 'Backup',
+                'qmrestore': 'Restauration VM',
+                'vzrestore': 'Restauration LXC',
+                'aptupdate': 'Mise a jour APT',
+                'startall': 'Demarrage global',
+                'stopall': 'Arret global'
+            }
+            description = type_descriptions.get(task_type, task_type)
+
+            formatted.append({
+                'id': task.get('upid', ''),
+                'type': task_type,
+                'description': description,
+                'status': status,
+                'node': task.get('node', ''),
+                'user': task.get('user', ''),
+                'vmid': task.get('id', ''),
+                'starttime': task.get('starttime', 0),
+                'endtime': task.get('endtime', 0),
+                'duration': (task.get('endtime', 0) - task.get('starttime', 0)) if task.get('endtime') else 0,
+                'error': task.get('status', '') if task.get('status') != 'OK' else ''
+            })
+
+        return jsonify(formatted)
+
+    except Exception as e:
+        print(f"Erreur tasks: {e}")
+        return jsonify({'error': str(e)}), 500
+
 
 if __name__ == '__main__':
     print(f"🚀 Supervision Proxmox démarrée sur http://0.0.0.0:5000")
