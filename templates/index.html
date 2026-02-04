@@ -440,6 +440,107 @@
             font-weight: 500;
         }
 
+        /* Search & Filters */
+        .toolbar {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            flex-wrap: wrap;
+        }
+
+        .search-box {
+            position: relative;
+            flex: 1;
+            min-width: 200px;
+            max-width: 300px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 10px 16px 10px 40px;
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 14px;
+            font-family: inherit;
+            transition: border-color 0.2s ease;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+        }
+
+        .search-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 18px;
+            height: 18px;
+            color: var(--text-muted);
+        }
+
+        .filter-group {
+            display: flex;
+            gap: 8px;
+        }
+
+        .filter-btn {
+            padding: 8px 14px;
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-secondary);
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            font-family: inherit;
+        }
+
+        .filter-btn:hover {
+            border-color: var(--text-muted);
+            color: var(--text-primary);
+        }
+
+        .filter-btn.active {
+            background: var(--accent-blue);
+            border-color: var(--accent-blue);
+            color: white;
+        }
+
+        .filter-btn.active-green {
+            background: var(--accent-green);
+            border-color: var(--accent-green);
+            color: white;
+        }
+
+        .filter-btn.active-red {
+            background: var(--accent-red);
+            border-color: var(--accent-red);
+            color: white;
+        }
+
+        .results-count {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-left: auto;
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-muted);
+        }
+
         /* Table */
         .table-card {
             grid-column: 1 / -1;
@@ -742,6 +843,26 @@
                     <div class="card-header">
                         <h2 class="card-title">Virtual Machines & Containers</h2>
                     </div>
+                    <!-- Search & Filter Toolbar -->
+                    <div class="toolbar">
+                        <div class="search-box">
+                            <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="11" cy="11" r="8"/>
+                                <path d="m21 21-4.35-4.35"/>
+                            </svg>
+                            <input type="text" class="search-input" id="searchInput" placeholder="Rechercher une VM..." oninput="filterVMs()">
+                        </div>
+                        <div class="filter-group">
+                            <button class="filter-btn active" data-filter="all" onclick="setFilter('all', this)">Tous</button>
+                            <button class="filter-btn" data-filter="running" onclick="setFilter('running', this)">Running</button>
+                            <button class="filter-btn" data-filter="stopped" onclick="setFilter('stopped', this)">Stopped</button>
+                        </div>
+                        <div class="filter-group">
+                            <button class="filter-btn" data-type="VM" onclick="setTypeFilter('VM', this)">VM</button>
+                            <button class="filter-btn" data-type="LXC" onclick="setTypeFilter('LXC', this)">LXC</button>
+                        </div>
+                        <div class="results-count" id="resultsCount"></div>
+                    </div>
                     <div class="card-body" style="padding: 0;">
                         <div id="loadingSpinner" class="loading">
                             <div class="spinner"></div>
@@ -772,11 +893,68 @@
     </div>
 
     <script>
+        // Global state
+        let allVMs = [];
+        let currentStatusFilter = 'all';
+        let currentTypeFilter = null;
+
         // Auto-refresh every 5 seconds
         setInterval(loadData, 5000);
 
         // Load data on startup
         loadData();
+
+        function setFilter(filter, btn) {
+            currentStatusFilter = filter;
+            // Update button states
+            document.querySelectorAll('.filter-group:first-of-type .filter-btn').forEach(b => {
+                b.classList.remove('active', 'active-green', 'active-red');
+            });
+            if (filter === 'running') {
+                btn.classList.add('active-green');
+            } else if (filter === 'stopped') {
+                btn.classList.add('active-red');
+            } else {
+                btn.classList.add('active');
+            }
+            filterVMs();
+        }
+
+        function setTypeFilter(type, btn) {
+            if (currentTypeFilter === type) {
+                currentTypeFilter = null;
+                btn.classList.remove('active');
+            } else {
+                document.querySelectorAll('[data-type]').forEach(b => b.classList.remove('active'));
+                currentTypeFilter = type;
+                btn.classList.add('active');
+            }
+            filterVMs();
+        }
+
+        function filterVMs() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+
+            const filtered = allVMs.filter(vm => {
+                // Search filter
+                const matchesSearch = vm.name.toLowerCase().includes(searchTerm) ||
+                                     vm.id.toString().includes(searchTerm) ||
+                                     vm.node.toLowerCase().includes(searchTerm);
+
+                // Status filter
+                const matchesStatus = currentStatusFilter === 'all' ||
+                                     (currentStatusFilter === 'running' && vm.status === 'running') ||
+                                     (currentStatusFilter === 'stopped' && vm.status !== 'running');
+
+                // Type filter
+                const matchesType = !currentTypeFilter || vm.type === currentTypeFilter;
+
+                return matchesSearch && matchesStatus && matchesType;
+            });
+
+            renderVMTable(filtered);
+            document.getElementById('resultsCount').textContent = `${filtered.length} / ${allVMs.length} instances`;
+        }
 
         function getGaugeColor(percent) {
             if (percent < 50) return 'low';
@@ -832,9 +1010,6 @@
                         throw new Error('Invalid format');
                     }
 
-                    const tbody = document.getElementById('vmTable');
-                    tbody.innerHTML = '';
-
                     // Sort by status (running first) then by ID
                     vms.sort((a, b) => {
                         if (a.status === 'running' && b.status !== 'running') return -1;
@@ -842,42 +1017,11 @@
                         return a.id - b.id;
                     });
 
-                    vms.forEach(vm => {
-                        const statusClass = vm.status === 'running' ? 'badge-running' : 'badge-stopped';
-                        const statusText = vm.status === 'running' ? 'Running' : 'Stopped';
-                        const typeClass = vm.type === 'VM' ? 'badge-vm' : 'badge-lxc';
+                    // Store globally for filtering
+                    allVMs = vms;
 
-                        const cpuColor = getGaugeColor(vm.cpu_usage || 0);
-                        const ramColor = getGaugeColor(vm.mem_percent || 0);
-
-                        const row = `
-                            <tr>
-                                <td class="vm-id">${vm.id}</td>
-                                <td class="vm-name">${vm.name}</td>
-                                <td><span class="badge ${typeClass}">${vm.type}</span></td>
-                                <td><span class="badge ${statusClass}">${statusText}</span></td>
-                                <td>
-                                    <div class="resource-bar">
-                                        <div class="bar-track">
-                                            <div class="bar-fill ${cpuColor}" style="width: ${vm.cpu_usage || 0}%"></div>
-                                        </div>
-                                        <span class="bar-text">${(vm.cpu_usage || 0).toFixed(0)}% / ${vm.cpu_cores || 1}c</span>
-                                    </div>
-                                </td>
-                                <td>
-                                    <div class="resource-bar">
-                                        <div class="bar-track">
-                                            <div class="bar-fill ${ramColor}" style="width: ${vm.mem_percent || 0}%"></div>
-                                        </div>
-                                        <span class="bar-text">${(vm.mem_percent || 0).toFixed(0)}% / ${formatBytes(vm.mem_max)}</span>
-                                    </div>
-                                </td>
-                                <td class="uptime-text">${vm.status === 'running' ? (vm.uptime_formatted || '-') : '-'}</td>
-                                <td class="node-text">${vm.node || 'N/A'}</td>
-                            </tr>
-                        `;
-                        tbody.innerHTML += row;
-                    });
+                    // Apply current filters
+                    filterVMs();
 
                     document.getElementById('loadingSpinner').style.display = 'none';
                     document.getElementById('tableContainer').style.display = 'block';
@@ -895,6 +1039,53 @@
                     `;
                     document.getElementById('errorContainer').style.display = 'block';
                 });
+        }
+
+        function renderVMTable(vms) {
+            const tbody = document.getElementById('vmTable');
+            tbody.innerHTML = '';
+
+            if (vms.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="no-results">Aucune VM trouvee</td></tr>';
+                return;
+            }
+
+            vms.forEach(vm => {
+                const statusClass = vm.status === 'running' ? 'badge-running' : 'badge-stopped';
+                const statusText = vm.status === 'running' ? 'Running' : 'Stopped';
+                const typeClass = vm.type === 'VM' ? 'badge-vm' : 'badge-lxc';
+
+                const cpuColor = getGaugeColor(vm.cpu_usage || 0);
+                const ramColor = getGaugeColor(vm.mem_percent || 0);
+
+                const row = `
+                    <tr>
+                        <td class="vm-id">${vm.id}</td>
+                        <td class="vm-name">${vm.name}</td>
+                        <td><span class="badge ${typeClass}">${vm.type}</span></td>
+                        <td><span class="badge ${statusClass}">${statusText}</span></td>
+                        <td>
+                            <div class="resource-bar">
+                                <div class="bar-track">
+                                    <div class="bar-fill ${cpuColor}" style="width: ${vm.cpu_usage || 0}%"></div>
+                                </div>
+                                <span class="bar-text">${(vm.cpu_usage || 0).toFixed(0)}% / ${vm.cpu_cores || 1}c</span>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="resource-bar">
+                                <div class="bar-track">
+                                    <div class="bar-fill ${ramColor}" style="width: ${vm.mem_percent || 0}%"></div>
+                                </div>
+                                <span class="bar-text">${(vm.mem_percent || 0).toFixed(0)}% / ${formatBytes(vm.mem_max)}</span>
+                            </div>
+                        </td>
+                        <td class="uptime-text">${vm.status === 'running' ? (vm.uptime_formatted || '-') : '-'}</td>
+                        <td class="node-text">${vm.node || 'N/A'}</td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
         }
 
         function renderNodes(nodes) {
