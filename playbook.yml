@@ -1,0 +1,63 @@
+---
+- hosts: all
+  become: yes
+
+  vars:
+    packages:
+      - git
+      - curl
+      - vim
+      - htop
+      - nginx
+      - docker.io
+      - ufw
+
+  tasks:
+
+    - name: Mettre à jour apt
+      apt:
+        update_cache: yes
+        upgrade: dist
+
+    - name: Installer paquets essentiels
+      apt:
+        name: "{{ packages }}"
+        state: present
+
+    - name: Activer et démarrer Nginx
+      systemd:
+        name: nginx
+        state: started
+        enabled: yes
+
+    - name: Activer et démarrer Docker
+      systemd:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Créer un utilisateur admin
+      user:
+        name: ansible
+        groups: sudo,docker
+        append: yes
+        shell: /bin/bash
+        create_home: yes
+
+    - name: Activer firewall
+      ufw:
+        state: enabled
+
+    - name: Autoriser SSH
+      ufw:
+        rule: allow
+        port: 22
+
+    - name: Autoriser HTTP
+      ufw:
+        rule: allow
+        port: 80
+
+    - name: Terminé
+      debug:
+        msg: "VM prête 🚀"
