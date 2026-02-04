@@ -273,6 +273,104 @@ def api_health():
     """Health check"""
     return jsonify({'status': 'ok', 'timestamp': datetime.now().isoformat()})
 
+@app.route('/api/vm/<node>/<vmtype>/<int:vmid>')
+def api_vm_details(node, vmtype, vmid):
+    """API: details d'une VM ou container specifique"""
+    try:
+        headers = get_headers()
+        endpoint_type = "qemu" if vmtype.upper() == "VM" else "lxc"
+
+        # Recuperer la config
+        config_response = requests.get(
+            f"{PROXMOX_API_URL}/nodes/{node}/{endpoint_type}/{vmid}/config",
+            headers=headers,
+            verify=False,
+            timeout=5
+        )
+
+        # Recuperer le status actuel
+        status_response = requests.get(
+            f"{PROXMOX_API_URL}/nodes/{node}/{endpoint_type}/{vmid}/status/current",
+            headers=headers,
+            verify=False,
+            timeout=5
+        )
+
+        if config_response.status_code != 200 or status_response.status_code != 200:
+            return jsonify({'error': 'VM non trouvee'}), 404
+
+        config = config_response.json().get("data", {})
+        status = status_response.json().get("data", {})
+
+        # Construire les details
+        details = {
+            'id': vmid,
+            'node': node,
+            'type': vmtype.upper(),
+            'name': config.get('name', status.get('name', f'{vmtype}-{vmid}')),
+            'status': status.get('status', 'unknown'),
+
+            # CPU
+            'cpu_usage': round(status.get('cpu', 0) * 100, 1),
+            'cpu_cores': config.get('cores', status.get('cpus', 1)),
+            'cpu_sockets': config.get('sockets', 1),
+
+            # Memoire
+            'mem_used': status.get('mem', 0),
+            'mem_max': status.get('maxmem', config.get('memory', 0) * 1024 * 1024),
+            'mem_percent': round((status.get('mem', 0) / max(status.get('maxmem', 1), 1)) * 100, 1),
+
+            # Disque
+            'disk_used': status.get('disk', 0),
+            'disk_max': status.get('maxdisk', 0),
+
+            # Reseau
+            'netin': status.get('netin', 0),
+            'netout': status.get('netout', 0),
+
+            # Uptime
+            'uptime': status.get('uptime', 0),
+            'uptime_formatted': format_uptime(status.get('uptime', 0)),
+
+            # Config supplementaire
+            'description': config.get('description', ''),
+            'ostype': config.get('ostype', 'unknown'),
+            'boot_order': config.get('boot', ''),
+        }
+
+        # Infos specifiques VM QEMU
+        if vmtype.upper() == "VM":
+            details['bios'] = config.get('bios', 'seabios')
+            details['machine'] = config.get('machine', '')
+            details['scsihw'] = config.get('scsihw', '')
+
+        # Infos specifiques LXC
+        else:
+            details['hostname'] = config.get('hostname', '')
+            details['arch'] = config.get('arch', 'amd64')
+            details['swap'] = config.get('swap', 0)
+
+        # Recuperer les interfaces reseau
+        networks = []
+        for key, value in config.items():
+            if key.startswith('net'):
+                networks.append({'interface': key, 'config': value})
+        details['networks'] = networks
+
+        # Recuperer les disques
+        disks = []
+        for key, value in config.items():
+            if any(key.startswith(prefix) for prefix in ['scsi', 'sata', 'ide', 'virtio', 'rootfs', 'mp']):
+                if isinstance(value, str) and ':' in value:
+                    disks.append({'device': key, 'config': value})
+        details['disks'] = disks
+
+        return jsonify(details)
+
+    except Exception as e:
+        print(f"Erreur recuperation details VM: {e}")
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
     print(f"🚀 Supervision Proxmox démarrée sur http://0.0.0.0:5000")
     print(f"   Connecté à Proxmox: {PROXMOX_HOST}")
