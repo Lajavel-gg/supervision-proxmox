@@ -905,17 +905,25 @@
         loadData();
 
         function setFilter(filter, btn) {
-            currentStatusFilter = filter;
+            // Si on clique sur le meme filtre (sauf "all"), on revient a "all"
+            if (currentStatusFilter === filter && filter !== 'all') {
+                currentStatusFilter = 'all';
+            } else {
+                currentStatusFilter = filter;
+            }
+
             // Update button states
-            document.querySelectorAll('.filter-group:first-of-type .filter-btn').forEach(b => {
+            document.querySelectorAll('[data-filter]').forEach(b => {
                 b.classList.remove('active', 'active-green', 'active-red');
             });
-            if (filter === 'running') {
-                btn.classList.add('active-green');
-            } else if (filter === 'stopped') {
-                btn.classList.add('active-red');
+
+            // Activer le bon bouton
+            if (currentStatusFilter === 'running') {
+                document.querySelector('[data-filter="running"]').classList.add('active-green');
+            } else if (currentStatusFilter === 'stopped') {
+                document.querySelector('[data-filter="stopped"]').classList.add('active-red');
             } else {
-                btn.classList.add('active');
+                document.querySelector('[data-filter="all"]').classList.add('active');
             }
             filterVMs();
         }
