@@ -17,32 +17,8 @@ Cette application permet de superviser un cluster Proxmox VE via une interface w
 
 ### Captures d'ecran
 
-```
-+------------------------------------------------------------------+
-|  Proxmox Dashboard                              [Connected] 10:30 |
-+------------------------------------------------------------------+
-|                                                                   |
-|  Server Status              |  Fleet Overview                     |
-|  +-----------------------+  |  +-------+ +-------+ +-------+     |
-|  | CPU    [====    ] 35% |  |  |  12   | |   9   | |   3   |     |
-|  | RAM    [======  ] 58% |  |  | Total | |Running| |Stopped|     |
-|  | Disk   [==      ] 27% |  |  +-------+ +-------+ +-------+     |
-|  +-----------------------+  |                                     |
-|                                                                   |
-|  Virtual Machines & Containers                                    |
-|  +----+----------+-----+--------+------+--------+-------+------+ |
-|  | ID | Name     | Type| Status | CPU  | Memory | Uptime| Node | |
-|  +----+----------+-----+--------+------+--------+-------+------+ |
-|  |100 | web-srv  | LXC | Running| 12%  | 45%    | 5j 2h | prox | |
-|  |101 | db-srv   | VM  | Running| 8%   | 62%    | 5j 2h | prox | |
-|  |102 | backup   | LXC | Stopped| -    | -      | -     | prox | |
-|  +----+----------+-----+--------+------+--------+-------+------+ |
-|                                                                   |
-|  Activite Recente                                                |
-|  - Demarrage VM 101 (db-srv) - root@pam - il y a 2h              |
-|  - Backup VM 100 - OK - il y a 6h                                |
-+------------------------------------------------------------------+
-```
+<img width="1541" height="1012" alt="image" src="https://github.com/user-attachments/assets/f4f309ef-d128-4d4a-8b1a-b81b1e9bce93" />
+
 
 ## Installation
 
