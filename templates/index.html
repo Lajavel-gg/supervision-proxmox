@@ -945,7 +945,7 @@
         }
 
         .mini-chart {
-            height: 80px;
+            height: 120px;
             width: 100%;
             position: relative;
         }
@@ -963,7 +963,7 @@
         }
 
         .chart-area {
-            opacity: 0.15;
+            opacity: 0.2;
         }
 
         .chart-line.cpu { stroke: var(--accent-blue); }
@@ -973,11 +973,62 @@
         .chart-line.net { stroke: var(--accent-purple); }
         .chart-area.net { fill: var(--accent-purple); }
 
+        .chart-grid-line {
+            stroke: var(--border-subtle);
+            stroke-width: 1;
+        }
+
+        .chart-label {
+            font-size: 9px;
+            fill: var(--text-muted);
+        }
+
+        .chart-tooltip {
+            position: absolute;
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 8px 12px;
+            font-size: 12px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.15s ease;
+            z-index: 10;
+            white-space: nowrap;
+        }
+
+        .chart-tooltip.visible {
+            opacity: 1;
+        }
+
+        .chart-tooltip-time {
+            color: var(--text-muted);
+            font-size: 11px;
+            margin-bottom: 4px;
+        }
+
+        .chart-tooltip-value {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .chart-hover-line {
+            stroke: var(--text-muted);
+            stroke-width: 1;
+            stroke-dasharray: 4,4;
+            opacity: 0;
+        }
+
+        .chart-hover-dot {
+            fill: var(--accent-blue);
+            opacity: 0;
+        }
+
         .chart-legend {
             display: flex;
             justify-content: space-between;
-            margin-top: 8px;
-            font-size: 11px;
+            margin-top: 4px;
+            font-size: 10px;
             color: var(--text-muted);
         }
 
@@ -995,12 +1046,53 @@
             display: flex;
             align-items: flex-start;
             gap: 12px;
-            padding: 12px 0;
+            padding: 12px;
+            margin: 0 -12px;
             border-bottom: 1px solid var(--border-subtle);
+            cursor: pointer;
+            border-radius: 8px;
+            transition: background 0.15s ease;
+        }
+
+        .activity-item:hover {
+            background: var(--bg-elevated);
         }
 
         .activity-item:last-child {
             border-bottom: none;
+        }
+
+        .activity-details {
+            display: none;
+            margin-top: 12px;
+            padding: 12px;
+            background: var(--bg-surface);
+            border-radius: 8px;
+            font-size: 12px;
+        }
+
+        .activity-item.expanded .activity-details {
+            display: block;
+        }
+
+        .activity-detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 0;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .activity-detail-row:last-child {
+            border-bottom: none;
+        }
+
+        .activity-detail-label {
+            color: var(--text-muted);
+        }
+
+        .activity-detail-value {
+            color: var(--text-primary);
+            font-weight: 500;
         }
 
         .activity-icon {
@@ -1824,23 +1916,65 @@
             }
 
             let html = '';
-            tasks.forEach(task => {
+            tasks.forEach((task, index) => {
                 const icon = getActivityIcon(task.status);
                 const time = formatTaskTime(task.starttime);
                 const duration = task.duration > 0 ? formatDuration(task.duration) : '';
+                const startDate = task.starttime ? new Date(task.starttime * 1000).toLocaleString('fr-FR') : '-';
+                const endDate = task.endtime ? new Date(task.endtime * 1000).toLocaleString('fr-FR') : 'En cours';
 
                 html += `
-                    <div class="activity-item">
+                    <div class="activity-item" onclick="toggleActivityDetails(this)">
                         <div class="activity-icon ${task.status}">
                             ${icon}
                         </div>
                         <div class="activity-content">
-                            <div class="activity-title">${task.description}${task.vmid ? ' - ' + task.vmid : ''}</div>
+                            <div class="activity-title">${task.description}${task.vmid ? ' - ID ' + task.vmid : ''}</div>
                             <div class="activity-meta">
                                 <span>${task.node}</span>
                                 <span>${task.user}</span>
                                 ${duration ? `<span>${duration}</span>` : ''}
                                 ${task.error ? `<span style="color: var(--accent-red);">${task.error}</span>` : ''}
+                            </div>
+                            <div class="activity-details">
+                                <div class="activity-detail-row">
+                                    <span class="activity-detail-label">Type</span>
+                                    <span class="activity-detail-value">${task.type}</span>
+                                </div>
+                                <div class="activity-detail-row">
+                                    <span class="activity-detail-label">Node</span>
+                                    <span class="activity-detail-value">${task.node}</span>
+                                </div>
+                                <div class="activity-detail-row">
+                                    <span class="activity-detail-label">Utilisateur</span>
+                                    <span class="activity-detail-value">${task.user}</span>
+                                </div>
+                                ${task.vmid ? `
+                                <div class="activity-detail-row">
+                                    <span class="activity-detail-label">VM/Container ID</span>
+                                    <span class="activity-detail-value">${task.vmid}</span>
+                                </div>
+                                ` : ''}
+                                <div class="activity-detail-row">
+                                    <span class="activity-detail-label">Debut</span>
+                                    <span class="activity-detail-value">${startDate}</span>
+                                </div>
+                                <div class="activity-detail-row">
+                                    <span class="activity-detail-label">Fin</span>
+                                    <span class="activity-detail-value">${endDate}</span>
+                                </div>
+                                ${duration ? `
+                                <div class="activity-detail-row">
+                                    <span class="activity-detail-label">Duree</span>
+                                    <span class="activity-detail-value">${duration}</span>
+                                </div>
+                                ` : ''}
+                                ${task.error ? `
+                                <div class="activity-detail-row">
+                                    <span class="activity-detail-label">Erreur</span>
+                                    <span class="activity-detail-value" style="color: var(--accent-red);">${task.error}</span>
+                                </div>
+                                ` : ''}
                             </div>
                         </div>
                         <div class="activity-time">${time}</div>
@@ -1849,6 +1983,10 @@
             });
 
             list.innerHTML = html;
+        }
+
+        function toggleActivityDetails(element) {
+            element.classList.toggle('expanded');
         }
 
         function getActivityIcon(status) {
@@ -1882,44 +2020,104 @@
         // ==================== CHARTS ====================
         let nodeChartData = {};
 
-        function createSVGChart(data, type, width = 300, height = 60) {
+        function createSVGChart(data, type, width = 300, height = 100, containerId = null) {
             if (!data || data.length === 0) {
                 return '<div style="text-align:center;color:var(--text-muted);font-size:12px;padding:20px;">Pas de donnees</div>';
             }
 
             // Filtrer les donnees valides
-            const validData = data.filter(d => d && d[type] !== undefined && d[type] !== null);
+            const validData = data.filter(d => d && d[type] !== undefined && d[type] !== null && d.time);
             if (validData.length === 0) {
                 return '<div style="text-align:center;color:var(--text-muted);font-size:12px;padding:20px;">Pas de donnees</div>';
             }
 
             const values = validData.map(d => d[type]);
-            const maxVal = Math.max(...values, 1);
-            const minVal = Math.min(...values, 0);
-            const range = maxVal - minVal || 1;
+            const isPercent = type === 'cpu' || type === 'mem_percent';
+            const maxVal = isPercent ? 100 : Math.max(...values, 1);
+            const minVal = 0;
 
-            const padding = 2;
-            const chartWidth = width - padding * 2;
-            const chartHeight = height - padding * 2;
+            // Marges pour les labels
+            const marginLeft = 35;
+            const marginRight = 10;
+            const marginTop = 10;
+            const marginBottom = 25;
+            const chartWidth = width - marginLeft - marginRight;
+            const chartHeight = height - marginTop - marginBottom;
 
             // Creer les points
             const points = validData.map((d, i) => {
-                const x = padding + (i / (validData.length - 1 || 1)) * chartWidth;
-                const y = padding + chartHeight - ((d[type] - minVal) / range) * chartHeight;
+                const x = marginLeft + (i / (validData.length - 1 || 1)) * chartWidth;
+                const y = marginTop + chartHeight - ((d[type] - minVal) / (maxVal - minVal)) * chartHeight;
                 return `${x},${y}`;
             }).join(' ');
 
             // Creer le path pour l'area
-            const areaPath = `M${padding},${height - padding} L${points} L${width - padding},${height - padding} Z`;
+            const firstPoint = points.split(' ')[0];
+            const lastPoint = points.split(' ').pop();
+            const areaPath = `M${marginLeft},${marginTop + chartHeight} L${points} L${marginLeft + chartWidth},${marginTop + chartHeight} Z`;
 
             const colorClass = type === 'cpu' ? 'cpu' : (type === 'mem_percent' ? 'ram' : 'net');
 
+            // Labels Y-axis (pourcentages ou valeurs)
+            let yLabels = '';
+            if (isPercent) {
+                yLabels = `
+                    <text class="chart-label" x="${marginLeft - 5}" y="${marginTop + 4}" text-anchor="end">100%</text>
+                    <text class="chart-label" x="${marginLeft - 5}" y="${marginTop + chartHeight/2 + 3}" text-anchor="end">50%</text>
+                    <text class="chart-label" x="${marginLeft - 5}" y="${marginTop + chartHeight + 3}" text-anchor="end">0%</text>
+                `;
+            } else {
+                const maxFormatted = formatBytesShort(maxVal);
+                yLabels = `
+                    <text class="chart-label" x="${marginLeft - 5}" y="${marginTop + 4}" text-anchor="end">${maxFormatted}</text>
+                    <text class="chart-label" x="${marginLeft - 5}" y="${marginTop + chartHeight + 3}" text-anchor="end">0</text>
+                `;
+            }
+
+            // Grid lines horizontales
+            const gridLines = `
+                <line class="chart-grid-line" x1="${marginLeft}" y1="${marginTop}" x2="${marginLeft + chartWidth}" y2="${marginTop}"/>
+                <line class="chart-grid-line" x1="${marginLeft}" y1="${marginTop + chartHeight/2}" x2="${marginLeft + chartWidth}" y2="${marginTop + chartHeight/2}"/>
+                <line class="chart-grid-line" x1="${marginLeft}" y1="${marginTop + chartHeight}" x2="${marginLeft + chartWidth}" y2="${marginTop + chartHeight}"/>
+            `;
+
+            // Labels X-axis (temps)
+            const firstTime = new Date(validData[0].time * 1000);
+            const lastTime = new Date(validData[validData.length - 1].time * 1000);
+            const midTime = new Date((validData[0].time + validData[validData.length - 1].time) / 2 * 1000);
+
+            const formatTime = (d) => d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+
+            const xLabels = `
+                <text class="chart-label" x="${marginLeft}" y="${height - 5}" text-anchor="start">${formatTime(firstTime)}</text>
+                <text class="chart-label" x="${marginLeft + chartWidth/2}" y="${height - 5}" text-anchor="middle">${formatTime(midTime)}</text>
+                <text class="chart-label" x="${marginLeft + chartWidth}" y="${height - 5}" text-anchor="end">${formatTime(lastTime)}</text>
+            `;
+
+            // Stocker les donnees pour le tooltip
+            const dataAttr = containerId ? `data-chart-id="${containerId}" data-chart-type="${type}"` : '';
+
             return `
-                <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none">
+                <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMidYMid meet" ${dataAttr} style="overflow:visible;">
+                    ${gridLines}
+                    ${yLabels}
+                    ${xLabels}
                     <path class="chart-area ${colorClass}" d="${areaPath}"/>
                     <polyline class="chart-line ${colorClass}" points="${points}"/>
                 </svg>
+                <div class="chart-tooltip" id="tooltip-${containerId || 'default'}">
+                    <div class="chart-tooltip-time"></div>
+                    <div class="chart-tooltip-value"></div>
+                </div>
             `;
+        }
+
+        function formatBytesShort(bytes) {
+            if (!bytes || bytes === 0) return '0';
+            const k = 1024;
+            const sizes = ['B', 'K', 'M', 'G', 'T'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round(bytes / Math.pow(k, i)) + sizes[i];
         }
 
         function loadNodeCharts(nodeName) {
@@ -1939,7 +2137,8 @@
             if (!container || !nodeChartData[nodeName]) return;
 
             const data = nodeChartData[nodeName];
-            container.innerHTML = createSVGChart(data, type);
+            const width = container.offsetWidth || 280;
+            container.innerHTML = createSVGChart(data, type, width, 100, nodeName);
 
             // Mettre a jour les boutons
             const tabs = container.parentElement.querySelectorAll('.chart-tab');
@@ -1964,6 +2163,9 @@
             const existingChart = document.getElementById('vmChartSection');
             if (existingChart) existingChart.remove();
 
+            // Stocker les donnees pour les switchs
+            window.currentVMChartData = data;
+
             const chartHtml = `
                 <div class="detail-section" id="vmChartSection">
                     <div class="section-title">Historique (derniere heure)</div>
@@ -1973,17 +2175,10 @@
                         <button class="chart-tab" onclick="switchVMChart('netin', this)">Reseau</button>
                     </div>
                     <div class="mini-chart" id="vmChart">
-                        ${createSVGChart(data, 'cpu', 400, 80)}
-                    </div>
-                    <div class="chart-legend">
-                        <span>-1h</span>
-                        <span>Maintenant</span>
+                        ${createSVGChart(data, 'cpu', 420, 120, 'vm')}
                     </div>
                 </div>
             `;
-
-            // Stocker les donnees pour les switchs
-            window.currentVMChartData = data;
 
             // Inserer apres la section ressources
             const sections = detailsContent.querySelectorAll('.detail-section');
@@ -1998,7 +2193,7 @@
             if (!window.currentVMChartData) return;
 
             const container = document.getElementById('vmChart');
-            container.innerHTML = createSVGChart(window.currentVMChartData, type, 400, 80);
+            container.innerHTML = createSVGChart(window.currentVMChartData, type, 420, 120, 'vm');
 
             // Update tabs
             btn.parentElement.querySelectorAll('.chart-tab').forEach(t => t.classList.remove('active'));
@@ -2069,10 +2264,6 @@
                             <div class="loading" style="padding: 10px;">
                                 <div class="spinner" style="width: 20px; height: 20px;"></div>
                             </div>
-                        </div>
-                        <div class="chart-legend">
-                            <span>-1h</span>
-                            <span>Maintenant</span>
                         </div>
                     </div>
                 `;
